@@ -58,9 +58,4 @@ SynScope/
 
 ```
 ### Code Usage
-1. **`BC_collapse`**: Processing raw barcode through collapsing cell barcodes.  
-2. **`cseq_NucUMIClean`**: Collapsing nucleus barcode information based on UMI.  
-3. **`cseq_synaptosome`**: Preprocessing synaptosomal barcode, applying filters to extract cleaned data.  
-4. **`cseq_HarmonyIntegration`**: Integrate different connectome-seq datasets to eliminate batch effect.  
-5. **`cseq_Annotation`**: Annotate the integrated connectome-seq dataset with Allen Institute mouse brain cell type atlas.  
-6. **`cseq_Cluster`**: Cluster the integrated dataset and annotate each cluster from marker gene expression.  
+1. **`synscope_shading_correction`**:   
