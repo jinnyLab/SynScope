@@ -2,7 +2,7 @@
 
 ## Overview
 
-SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence. It covers preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for convergence analysis.
+SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence analysis. It provides an integrated pipeline for image preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for presynaptic input convergence analysis.
 
 ## Quick start
 
@@ -195,7 +195,7 @@ Use `--training true` only when fitting a new model (weights are saved under `{r
 |----------|-------------|
 | `--data` | Input multi-frame TIFF |
 | `--result_dir` | Output directory (writes `*_denoised_image.tiff`; must contain `model/my_model_*` for inference) |
-| `--clean_slide` / `--noisy_slide` | Frame indices for ISCL training pairs |
+| `--clean_slide` / `--noisy_slide` | Frame indices used to define clean–noisy training pairs for ISCL; the number of indices must be identical |
 | `--target_range` | Z range to enhance with CLAHE + histogram matching |
 | `--ref_slide` | Reference frame for histogram matching |
 | `--training` | `true` to train, `false` to run inference (use lowercase strings) |
