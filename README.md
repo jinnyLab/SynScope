@@ -59,7 +59,7 @@ conda install -y \
   shapely pandas seaborn joblib anaconda-client conda-build ninja qt markdown \
   scikit-image matplotlib mkl-service mkl_fft mkl_random
 
-conda install -y zimg -c fenglab
+conda install -y zimg -c fenglab   # our conda distribution (required; not on PyPI)
 ```
 
 **2. Pip (remaining dependencies)**
@@ -74,7 +74,7 @@ pip install --upgrade --no-cache-dir \
 | Package | Source | Used for |
 |---------|--------|----------|
 | `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda | Arrays, stats, plotting, classification |
-| `zimg` | conda (`fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection |
+| `zimg` | conda (`-c fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection (our conda distribution) |
 | `opencv-python`, `tifffile`, `Pillow`, `tqdm` | pip | Image I/O, z-signal preprocessing |
 | `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
 | `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
@@ -300,7 +300,7 @@ export_puncta_info("path/to/puncta/folder")
 |-------|----------------|
 | `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/` (see above). |
 | Classification model not found | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
-| `zimg` import error | Install `zimg` from your lab distribution; it is not on PyPI. |
+| `zimg` import error | Install from conda channel: `conda install zimg -c fenglab` (not available on PyPI). |
 | Chromatic shift fails | Confirm `scope` is `lsm980`, `lsm780`, or `calculate`; files under `model/_chromatic_shift_parameters/` must be present. |
 | Z-signal uses wrong mode | Pass `--training false` (lowercase). Do not use `False` with capital F unless using the Python API directly. |
 
