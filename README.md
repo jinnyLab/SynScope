@@ -7,8 +7,8 @@ SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence anal
 ## Quick start
 
 ```bash
-git clone <https://github.com/ychoi68/SynScope.git>
-cd SynScope
+git clone <https://github.com/jinnyLab/SynScope.git>
+cd SynScope_github
 
 conda create -n synscope python=3.11 -y
 conda activate synscope
@@ -23,7 +23,7 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 |------|------------------|----------------|
 | 1. Shading | `python synscope_shading_correction.py` | `*_shading_corrected.tiff` |
 | 2. Chromatic | `python synscope_chromatic_shift_correction.py` | `*_chromatic_corrected.tiff` |
-| 3. Z-signal (optional) | see [Z-signal correction](#3-z-signal-correction) | `*_denoised_image.tiff` |
+| 3. Z-signal | split → `synscope_z-signal_correction.py` → merge | per-channel `*_denoised_image.tiff`, then `*_merged.tiff` |
 | 4. Detection | `python synscope_synapse_detection.py` | `*_detected_puncta.nimp` |
 | 5. Classification | `python synscope_synapse_classification.py` | `*_predictions.csv`, grouped `.nimp` |
 
@@ -122,9 +122,10 @@ SynScope_github/
 
 1. **Shading correction** on raw CZI → `*_shading_corrected.tiff`
 2. **Chromatic shift correction** on the shading-corrected stack
-3. **Z-signal correction** (optional) on multi-z TIFF stacks
-4. **Puncta detection** → `*_detected_puncta.nimp`
-5. **Puncta classification** → CSV predictions and grouped `.nimp` files
+3. **Z-signal correction** on multi-z TIFF stacks — run **per channel** (see step 4)
+4. **Split / merge** (`synscope_img_util.py`) — **split** the multi-channel stack before z-signal; run z-signal on each single-channel TIFF; **merge** the denoised channels back into one stack
+5. **Puncta detection** → `*_detected_puncta.nimp`
+6. **Puncta classification** → CSV predictions and grouped `.nimp` files
 
 ---
 
@@ -171,22 +172,52 @@ python synscope_chromatic_shift_correction.py
 
 ### 3. Z-signal correction
 
-Denoises z-related signal variation in a **multi-frame TIFF** using ISCL (Lee et al., IEEE TMI 2021).
+Denoises z-related signal variation in a **multi-frame TIFF** (one channel, z as frames) using ISCL (Lee et al., IEEE TMI 2021).
 
-**Model layout:** inference loads weights from `{result_dir}/model/my_model_F` and `my_model_H`. The bundled checkpoint lives under `model/_z_signal_model/` with those filenames, so copy or link them before running:
+Multi-channel images must be **split before** z-signal and **merged after**, using `synscope_img_util.py` (see also step 4 in [Typical workflow](#typical-workflow)).
+
+**1. Split channels**
+
+```python
+from synscope_img_util import channel_split
+
+channel_split(
+    image_folder="path/to/images",
+    filename="sample_chromatic_corrected.tiff",
+    result_folder="path/to/images/channel_split",  # default: {image_folder}/channel_split
+)
+# Writes sample_chromatic_corrected_ch1.tiff, _ch2.tiff, ...
+```
+
+**2. Run z-signal on each channel**
+
+**Model layout:** inference loads weights from `{result_dir}/model/my_model_F` and `my_model_H`. Copy the bundled checkpoint once, then run per channel:
 
 ```bash
 mkdir -p ./z_signal_run/model
 cp model/_z_signal_model/my_model_* ./z_signal_run/model/
 
 python synscope_z-signal_correction.py \
-  --data path/to/stack.tif \
-  --result_dir ./z_signal_run \
+  --data path/to/images/channel_split/sample_chromatic_corrected_ch4.tiff \
+  --result_dir ./z_signal_run/ch4 \
   --clean_slide 0 1 2 \
   --noisy_slide 3 4 5 \
   --target_range 10 50 \
   --ref_slide 3 \
   --training false
+```
+
+Repeat for each channel you want corrected (adjust `--data`, `--result_dir`, and slide indices as needed). Outputs are `*_denoised_image.tiff` under each channel’s `result_dir`.
+
+**3. Merge channels**
+
+Place all denoised single-channel TIFFs in one folder (same naming pattern as after split), then merge:
+
+```python
+from synscope_img_util import merge_channel
+
+merge_channel("path/to/denoised_channels_folder")
+# Writes {stem}_merged.tiff
 ```
 
 Use `--training true` only when fitting a new model (weights are saved under `{result_dir}/model/`).
