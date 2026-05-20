@@ -94,7 +94,7 @@ Pretrained assets live under `model/`:
 ## Project structure
 
 ```text
-SynScope_github/
+SynScope/
 ├── synscope_shading_correction.py         # Shading correction entry point
 ├── synscope_chromatic_shift_correction.py # Chromatic shift correction
 ├── synscope_z-signal_correction.py        # Z-signal correction (ISCL)
