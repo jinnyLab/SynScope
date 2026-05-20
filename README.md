@@ -8,7 +8,7 @@ SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence anal
 
 ```bash
 git clone <https://github.com/ychoi68/SynScope.git>
-cd SynScope_github
+cd SynScope
 
 conda create -n synscope python=3.11 -y
 conda activate synscope
