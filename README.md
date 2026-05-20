@@ -227,7 +227,7 @@ Use `--training true` only when fitting a new model (weights are saved under `{r
 | `--data` | Input multi-frame TIFF |
 | `--result_dir` | Output directory (writes `*_denoised_image.tiff`; must contain `model/my_model_*` for inference) |
 | `--clean_slide` / `--noisy_slide` | Frame indices used to define clean–noisy training pairs for ISCL; the number of indices must be identical |
-| `--target_range` | Z range to enhance with CLAHE + histogram matching |
+| `--target_range` | Z range to enhance with histogram matching |
 | `--ref_slide` | Reference frame for histogram matching |
 | `--training` | `true` to train, `false` to run inference (use lowercase strings) |
 
