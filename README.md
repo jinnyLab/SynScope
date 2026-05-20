@@ -31,12 +31,12 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 
 - **Image preprocessing**
   - Shading correction (BaSiC flatfield on tiled CZI data)
-  - Chromatic shift correction (ANTs transforms for LSM780 / LSM980)
+  - Chromatic shift correction (ANTs transforms for LSM780 / LSM980 confocal images)
   - Z-signal correction (ISCL-based denoising on multi-frame TIFF stacks)
 
 - **Synapse processing**
   - mGRASP puncta detection
-  - Puncta classification / assignment (pairwise overlap model)
+  - Puncta classification / assignment
 
 ## Requirements
 
@@ -45,7 +45,7 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 
 ### Installation
 
-Use **conda** for the scientific core and **`zimg`**, then **pip** for everything else. Do not reinstall via pip packages already provided by conda (`numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`).
+Use **conda** for the scientific core and **`zimg`**, then **pip** for everything else. 
 
 **1. Conda (main)**
 
