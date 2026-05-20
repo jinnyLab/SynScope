@@ -18,6 +18,10 @@ def run_puncta_detection(
     voxelSize_Z: float = 0.0,
     swc_name: str | None = None,
 ):
+    '''
+    reference: Feng et al. "Improved synapse detection for mGRASP-assisted brain connectivity mapping" Bioinformatics, 28(2012)
+
+    '''
     if not result_folder:
         result_folder = os.path.join(image_folder)
     os.makedirs(result_folder, exist_ok=True)

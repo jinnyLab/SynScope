@@ -10,13 +10,13 @@ import numpy as np
 from zimg import ZImg
 from utils import img_util
 
-TX_LIST_LSM980 = [
-    './chromatic_shift_parameters/lsm980/lsm980_chromatic_shift.nii.gz',
-    './chromatic_shift_parameters/lsm980/lsm980_chromatic_shift.mat'
+TX_LIST_LSM780 = [
+    './model/_chromatic_shift_parameters/lsm780/lsm780_chromatic_shift.mat'
 ]
 
-TX_LIST_LSM780 = [
-    './chromatic_shift_parameters/lsm780/lsm780_chromatic_shift.mat'
+TX_LIST_LSM980 = [
+    './model/_chromatic_shift_parameters/lsm980/lsm980_chromatic_shift.nii.gz',
+    './model/_chromatic_shift_parameters/lsm980/lsm980_chromatic_shift.mat'
 ]
 
 

@@ -18,10 +18,22 @@ from tqdm import tqdm
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 
-from MiddleRecon.utils.image_tool import *
-from MiddleRecon.utils.parser import parse_args
-from MiddleRecon.utils.callbacks import Val_Init
-from MiddleRecon.models.trainer import Trainer
+from utils.ISCL.utils.image_tool import *
+from utils.ISCL.utils.parser import parse_args
+from utils.ISCL.utils.callbacks import Val_Init
+from utils.ISCL.models.trainer import Trainer
+
+
+def str2bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    value = str(value).lower()
+    if value in ('yes', 'true', 't', 'y', '1'):
+        return True
+    if value in ('no', 'false', 'f', 'n', '0'):
+        return False
+    raise argparse.ArgumentTypeError(f'Expected a boolean value, got {value!r}')
+
 
 def infer_output_dtype(frame: np.ndarray) -> str:
     if frame.dtype == np.uint8:
@@ -83,7 +95,7 @@ def main():
     parser.add_argument('--target_range', type=int, nargs='+')
     parser.add_argument('--ref_slide', type=int, default=3)
     parser.add_argument('--clip_limit', type=float, default=1.5)
-    parser.add_argument('--training', type=bool, default=False)
+    parser.add_argument('--training', type=str2bool, default=False)
     parser.add_argument('--data', type=str, default=None)
     parser.add_argument('--result_dir', type=str)
     parser.add_argument('--dtype', type=str, default=None, choices=['uint8', 'uint16'])

@@ -2,23 +2,26 @@
 import os
 import sys
 
-from pathlib import Path,PurePath
-sys.path.append('../')
-
-from typing import Dict, List, Optional, Tuple, Any, Union
+from pathlib import Path
+from typing import Dict, List, Optional, Any
 from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 
-from zimg import *
-from util.mGRASP_puncta_core_functions import (
+_script_dir = Path(__file__).resolve().parent
+if str(_script_dir) not in sys.path:
+    sys.path.insert(0, str(_script_dir))
+
+from zimg import ZPuncta
+from utils.synpase_classification.mGRASP_puncta_core_functions import (
     ClassifyConfig,
     load_data,
     compute_adaptive_thresholds,
     separate_axon_dendrite,
-    process_punctum_channels,)
-from util.mGRASP_puncta_pairwise_overlap_inference import PairwiseOverlapClassifier
+    process_punctum_channels,
+)
+from utils.synpase_classification.mGRASP_puncta_inference import PairwiseOverlapClassifier
 
 
 def _find_models() -> Optional[str]:
@@ -29,13 +32,14 @@ def _find_models() -> Optional[str]:
         Path to model directory if found, None otherwise
     """
     script_dir = Path(__file__).resolve().parent
+    model_dir = script_dir / "model/_assignment_model"
 
-    # Check model folder in the same directory as the script
-    model_dir = script_dir / "model"
+    if not model_dir.is_dir():
+        return None
 
-    if model_dir.exists() and model_dir.is_dir():
-        # Check if it contains unified model
-        unified_model = model_dir / "unified_overlap_model.pkl"
+    for name in ("model.pkl", "unified_overlap_model.pkl"):
+        if (model_dir / name).is_file():
+            return str(model_dir)
     return None
 
 
@@ -137,7 +141,6 @@ def classify_puncta(
             model_dir,
             overlap_thresh=overlap_thresh,
             ch5_overlap_thresh=DEFAULT_CH5_OVERLAP_THRESH,
-            confidence_threshold=confidence_threshold,
         )
         print("  Models loaded successfully")
         print()
