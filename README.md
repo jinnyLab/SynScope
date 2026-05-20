@@ -2,12 +2,12 @@
 
 ## Overview
 
-SynScope is a Python toolkit for multiplex **mGRASP** image analysis. It covers preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for convergence analysis.
+SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence. It covers preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for convergence analysis.
 
 ## Quick start
 
 ```bash
-git clone <repository-url>
+git clone <rhttps://github.com/ychoi68/SynScope.git>
 cd SynScope_github
 
 conda create -n synscope python=3.11 -y
