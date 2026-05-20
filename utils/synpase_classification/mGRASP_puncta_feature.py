@@ -254,24 +254,6 @@ def compute_multiscale_overlap(
     return combined
 
 
-def find_dominant_channel(
-    z_mask_map: Dict[int, Dict[int, Tuple[np.ndarray, Tuple]]],
-    channel_map: Dict[int, np.ndarray]
-) -> Optional[int]:
-    """Find dominant channel using spatial extent (number of z-slices)."""
-    channel_scores = {}
-
-    for ch, zdict in z_mask_map.items():
-        z_extent = len(zdict)
-        channel_scores[ch] = z_extent
-
-    if not channel_scores:
-        return None
-
-    dominant_ch = max(channel_scores.items(), key=lambda x: x[1])[0]
-    return dominant_ch
-
-
 def calculate_clique_score(
     clique: List[int],
     z_mask_map: Dict[int, Dict[int, Tuple[np.ndarray, Tuple]]]
@@ -597,15 +579,6 @@ def compute_enhanced_features_for_punctum(
     else:
         feat["rule_clique_score"] = 0.0
         feat["rule_clique_size"] = 0
-
-    # Rule-based features: Dominance (spatial extent)
-    dominant_ch = find_dominant_channel(z_mask_map, channel_map)
-    if dominant_ch:
-        feat["rule_dominant_channel"] = dominant_ch
-        feat["rule_dominant_z_extent"] = len(z_mask_map[dominant_ch])
-    else:
-        feat["rule_dominant_channel"] = 0
-        feat["rule_dominant_z_extent"] = 0
 
     # Rule-based features: Aggregate overlap scores
     if overlap_scores:
