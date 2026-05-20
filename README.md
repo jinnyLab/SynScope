@@ -19,13 +19,13 @@ conda config --append channels conda-forge
 
 Run all scripts from the **repository root** so paths to `model/` resolve correctly.
 
-|        Step       |              Command / script                   |            Typical output            |
-|-------------------|-------------------------------------------------|--------------------------------------|
-| 1. Shading        | `python synscope_shading_correction.py`         | `*_shading_corrected.tiff`           |
-| 2. Chromatic      | `python synscope_chromatic_shift_correction.py` | `*_chromatic_corrected.tiff`         |
-| 3. Z-signal       | see [#3 z-signal correction]                    | `*_denoised_image.tiff`              |
-| 4. Detection      | `python synscope_synapse_detection.py`          | `*_detected_puncta.nimp`             | 
-| 5. Classification | `python synscope_synapse_classification.py`     | `*_predictions.csv`, grouped `.nimp` |
+| Step | Command / script | Typical output |
+|------|------------------|----------------|
+| 1. Shading | `python synscope_shading_correction.py` | `*_shading_corrected.tiff` |
+| 2. Chromatic | `python synscope_chromatic_shift_correction.py` | `*_chromatic_corrected.tiff` |
+| 3. Z-signal (optional) | see [Z-signal correction](#3-z-signal-correction) | `*_denoised_image.tiff` |
+| 4. Detection | `python synscope_synapse_detection.py` | `*_detected_puncta.nimp` |
+| 5. Classification | `python synscope_synapse_classification.py` | `*_predictions.csv`, grouped `.nimp` |
 
 ## Features
 
@@ -72,25 +72,25 @@ pip install --upgrade --no-cache-dir \
   tifffile Pillow tqdm networkx tensorflow tensorflow-addons
 ```
 
-|                                   Package                                |       Source      |                  Used for                  |
-|--------------------------------------------------------------------------|-------------------|--------------------------------------------|
-| `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda             | Arrays, stats, plotting, classification    |
-| `zimg`                                                                   | conda (`fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection |
-| `opencv-python`, `tifffile`, `Pillow`, `tqdm`                            | pip               | Image I/O, z-signal preprocessing          |
-| `tensorflow`, `tensorflow-addons`                                        | pip               | Z-signal (ISCL) inference                  |
-| `antspyx`, `itk`, `itk-elastix`                                          | pip               | Chromatic shift registration               |
-| `networkx`, `catboost`, `lightgbm`                                       | pip               | Classification graphs and models           |
-| `tensorstore`                                                            | pip               | Tensor I/O (lab stack)                     |
+| Package | Source | Used for |
+|---------|--------|----------|
+| `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda | Arrays, stats, plotting, classification |
+| `zimg` | conda (`fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection |
+| `opencv-python`, `tifffile`, `Pillow`, `tqdm` | pip | Image I/O, z-signal preprocessing |
+| `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
+| `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
+| `networkx`, `catboost`, `lightgbm` | pip | Classification graphs and models |
+| `tensorstore` | pip | Tensor I/O (lab stack) |
 
 ### Bundled models and parameters
 
 Pretrained assets live under `model/`:
 
-|                Path                  |                      Purpose                          |
-|--------------------------------------|-------------------------------------------------------|
-| `model/_chromatic_shift_parameters/` | LSM780 / LSM980 chromatic shift transforms            |
-| `model/_z_signal_model/`             | ISCL weights (`my_model_F`, `my_model_H`)             |
-| `model/_assignment_model/`           | Puncta classifier (`model.pkl`, `feature_names.json`) |
+| Path | Purpose |
+|------|---------|
+| `model/_chromatic_shift_parameters/` | LSM780 / LSM980 chromatic shift transforms |
+| `model/_z_signal_model/` | ISCL weights (`my_model_F`, `my_model_H`) |
+| `model/_assignment_model/` | Puncta classifier (`model.pkl`, `feature_names.json`) |
 
 ## Project structure
 
@@ -192,16 +192,15 @@ python synscope_z-signal_correction.py \
 
 Use `--training true` only when fitting a new model (weights are saved under `{result_dir}/model/`).
 
-|      Argument    |                      Description                   |
-|------------------|----------------------------------------------------|
-| `--data`         | Input multi-frame TIFF                             |
-| `--result_dir`   | Output directory (writes `*_denoised_image.tiff`;  |
-|                    must contain `model/my_model_*` for inference)     |
-| `--clean_slide`  | Frame indices for ISCL training pairs              |
-| `--noisy_slide`  | Frame indices for ISCL training pairs              |
+| Argument | Description |
+|----------|-------------|
+| `--data` | Input multi-frame TIFF |
+| `--result_dir` | Output directory (writes `*_denoised_image.tiff`; must contain `model/my_model_*` for inference) |
+| `--clean_slide` / `--noisy_slide` | Frame indices for ISCL training pairs |
 | `--target_range` | Z range to enhance with CLAHE + histogram matching |
-| `--ref_slide`    | Reference frame for histogram matching             |
-| `--training`     | `true` to train, `false` to run inference          |
+| `--ref_slide` | Reference frame for histogram matching |
+| `--training` | `true` to train, `false` to run inference (use lowercase strings) |
+
 
 ### 4. Synapse (puncta) detection
 
@@ -267,14 +266,13 @@ export_puncta_info("path/to/puncta/folder")
 
 ## Troubleshooting
 
-|                  Issue                  |                                      What to check                                             |
-|-----------------------------------------|------------------------------------------------------------------------------------------------|
-| `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/`                             |
-| Classification model not found          | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
-| `zimg` import error                     | Install `zimg` from conda (see above).                                                         |
-| Chromatic shift fails                   | Confirm `scope` is `lsm980`, `lsm780`, or `calculate`;                                         |
-|                                           files under `model/_chromatic_shift_parameters/` must be present.                              |
-| Z-signal uses wrong mode                | Pass `--training false` (lowercase).                                                           |
+| Issue | What to check |
+|-------|----------------|
+| `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/` (see above). |
+| Classification model not found | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
+| `zimg` import error | Install `zimg` from your lab distribution; it is not on PyPI. |
+| Chromatic shift fails | Confirm `scope` is `lsm980`, `lsm780`, or `calculate`; files under `model/_chromatic_shift_parameters/` must be present. |
+| Z-signal uses wrong mode | Pass `--training false` (lowercase). Do not use `False` with capital F unless using the Python API directly. |
 
 ---
 
