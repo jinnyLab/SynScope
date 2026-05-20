@@ -42,7 +42,6 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 
 - Python 3.11
 - [Conda](https://docs.conda.io/) (primary environment manager)
-- **GPU recommended** for z-signal correction (TensorFlow with optional multi-GPU via `MirroredStrategy`)
 
 ### Installation
 
