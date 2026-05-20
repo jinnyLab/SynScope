@@ -310,3 +310,4 @@ export_puncta_info("path/to/puncta/folder")
 
 - **Puncta detection:** Feng et al., *Improved synapse detection for mGRASP-assisted brain connectivity mapping*, Bioinformatics (2012).
 - **Z-signal (ISCL):** Lee et al., *ISCL: Interdependent Self-Cooperative Learning for Unpaired Image Denoising*, IEEE TMI (2021).
+- **Shading correction:** Peng et al., *A BaSiC tool for background and shading correction of optical microscopy images*, Nature Communications, (2017).
