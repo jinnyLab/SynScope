@@ -81,7 +81,7 @@ pip install --upgrade --no-cache-dir \
 | `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
 | `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
 | `networkx`, `catboost`, `lightgbm` | pip | Classification graphs and models |
-| `tensorstore` | pip | Tensor I/O (lab stack) |
+| `tensorstore` | pip | Tensor I/O |
 
 ### Bundled models and parameters
 
