@@ -100,4 +100,4 @@ if __name__ == "__main__":
 
     moving_channel = 4  # Choose from 1, 2, 3, 4, or 5
 
-    apply_chromatic_correction(img_path, scope='lsm980', moving_channel=moving_channel)
+    apply_chromatic_correction(img_path, scope='calculate', moving_channel=moving_channel)
