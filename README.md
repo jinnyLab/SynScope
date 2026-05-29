@@ -4,7 +4,7 @@
 
 SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence analysis. It provides an integrated pipeline for image preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for presynaptic input convergence analysis.
 
-A web-based implementation of SynScope is available at 117.52.72.212:6030 (access code: synscope)
+A web-based implementation of SynScope is available at http://117.52.72.212:6030 (access code: synscope)
 
 ## Quick start
 
