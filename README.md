@@ -37,8 +37,8 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
   - Z-signal correction (ISCL-based denoising on multi-frame TIFF stacks)
 
 - **Synapse processing**
-  - mGRASP puncta detection
-  - Puncta classification / assignment
+  - mGRASP synpase detection
+  - Synapse classification / assignment
 
 ## Requirements
 
@@ -126,8 +126,8 @@ SynScope/
 2. **Chromatic shift correction** on the shading-corrected stack
 3. **Z-signal correction** on multi-z TIFF stacks — run **per channel** (see step 4)
 4. **Split / merge** (`synscope_img_util.py`) — **split** the multi-channel stack before z-signal; run z-signal on each single-channel TIFF; **merge** the denoised channels back into one stack
-5. **Puncta detection** → `*_detected_puncta.nimp`
-6. **Puncta classification** → CSV predictions and grouped `.nimp` files
+5. **Synapse detection** → `*_detected_puncta.nimp`
+6. **Synapse classification** → CSV predictions and grouped `.nimp` files
 
 ---
 
