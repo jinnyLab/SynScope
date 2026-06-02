@@ -81,10 +81,7 @@ class PairwiseOverlapClassifier:
         self.overlap_thresh_override = overlap_thresh
         # overlap_thresh will be set from model's optimal_threshold after loading
         self.overlap_thresh = None
-        # Use very lenient threshold for channel 5 pairs to reduce false negatives
-        # Analysis shows 81.0% of errors are removing channel 5 incorrectly
-        # Recall for channel 5 classes is extremely low (2.4% for 1_2_3_5, 3.1% for 1_3_5)
-        # Lowered to 0.20 to be much more inclusive (was 0.30, originally 0.40)
+     
         if ch5_overlap_thresh is None:
             self.ch5_overlap_thresh = 0.20  # Very lenient threshold to reduce false negatives
         else:
@@ -202,10 +199,6 @@ class PairwiseOverlapClassifier:
             if prob > 0:
                 all_ch5_probs.append((pair, prob))
 
-        # Use a more lenient threshold for validation to reduce false negatives
-        # Analysis shows 82.9% of errors are removing channel 5 incorrectly
-        # Use a lower threshold that matches the graph building logic
-        # If optimal thresholds are available, use them with the same lenient multiplier
         strict_threshold = self.ch5_overlap_thresh  # Default fallback
 
         # If we have optimal thresholds, use them with lenient multiplier
@@ -220,13 +213,6 @@ class PairwiseOverlapClassifier:
                 # No optimal thresholds, use extremely low default due to model under-prediction
                 strict_threshold = 0.05  # Extremely low due to model under-prediction
 
-        # DETECTION-BASED APPROACH: Since we're using detection as the primary signal,
-        # be extremely conservative about removing channel 5. Only remove if:
-        # 1. Channel 5 is NOT detected (shouldn't happen if added by post-processing), OR
-        # 2. Confidence is extremely low (< 0.01) AND overlap is 0.0
-        # This ensures channel 5 added by detection-based post-processing is rarely removed
-
-        # Check if channel 5 is actually detected
         ch5_actually_detected = 5 in detected_channels or 4 in detected_channels
         if not ch5_actually_detected:
             # Channel 5 not detected - remove it (shouldn't happen if added correctly)
@@ -236,10 +222,6 @@ class PairwiseOverlapClassifier:
                 new_pred = normalize_channel_combination(pred_channels)
                 return new_pred
 
-        # Only remove channel 5 if BOTH:
-        # 1. Overlap is exactly 0.0 (no probability at all) AND
-        # 2. Confidence is extremely low (< 0.01)
-        # This is extremely conservative - we want to keep channel 5 if it's detected
         if max_ch5_overlap == 0.0 and overall_confidence is not None and overall_confidence < 0.01:
             pred_channels = [c for c in pred_channels if c != 5 and c != 4]
             if pred_channels:
