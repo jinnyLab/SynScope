@@ -251,7 +251,7 @@ run_puncta_detection(
 )
 ```
 
-Outputs include `*_detected_puncta.nimp`, `*_detected_soma_puncta.nimp`, and logs under `log/`.
+Outputs include `*[file_name]_detected_puncta.nimp`, `*[file_name]_detected_soma_puncta.nimp`, `*[swc_name]_puncta.nimp`, `*[swc_name]_soma_puncta.nimp` and logs under `log/`.
 
 ```bash
 python synscope_synapse_detection.py
