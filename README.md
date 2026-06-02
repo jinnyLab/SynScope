@@ -72,7 +72,7 @@ pip install --upgrade --no-cache-dir \
 | Package | Source | Used for |
 |---------|--------|----------|
 | `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image` | conda | Arrays, stats, filtering, classification |
-| `zimg` | conda (`-c fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection (our conda distribution) |
+| `zimg` | conda (`-c fenglab`) | .czi / .tiff / `.nimp` I/O, puncta detection (our conda distribution) |
 | `opencv`, `tifffile`, `pillow`, `tqdm` | conda | Image I/O, z-signal preprocessing |
 | `tensorflow` | conda | Z-signal (ISCL) inference |
 | `tensorflow-addons` | pip | ISCL training/inference helpers |
