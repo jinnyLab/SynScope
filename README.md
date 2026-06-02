@@ -297,11 +297,14 @@ export_puncta_info("path/to/puncta/folder")
 
 | Issue | What to check |
 |-------|----------------|
-| `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/` (see above). |
-| Classification model not found | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
 | `zimg` import error | Install from conda channel: `conda install zimg -c fenglab` (not available on PyPI). |
 | Chromatic shift fails | Confirm `scope` is `lsm980`, `lsm780`, or `calculate`; files under `model/_chromatic_shift_parameters/` must be present. |
 | Z-signal uses wrong mode | Pass `--training false` (lowercase). Do not use `False` with capital F unless using the Python API directly. |
+| `clean_slide` / `noisy_slide` mismatch | Use the same number of indices for both lists, and keep every index within the TIFF frame range. |
+| `target_range` causes errors or odd enhancement | Pass two integers (`start end`) with `start < end`, and keep both inside valid frame indices. |
+| `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/` (see above). |
+| Classification model not found | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
+| Empty or near-empty puncta detection | Verify `mGRASP_channel`, `dendrite_channel`, and voxel sizes (`voxelSize_X/Y/Z`) match the image metadata. |
 
 ---
 
