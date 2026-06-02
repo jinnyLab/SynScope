@@ -122,10 +122,10 @@ SynScope/
 
 ## Typical workflow
 
-1. **Shading correction** on raw CZI → `*_shading_corrected.tiff`
+1. **Shading correction** on raw .czi → `*_shading_corrected.tiff`
 2. **Chromatic shift correction** on the shading-corrected stack
-3. **Z-signal correction** on multi-z TIFF stacks — run **per channel** (see step 4)
-4. **Split / merge** (`synscope_img_util.py`) — **split** the multi-channel stack before z-signal; run z-signal on each single-channel TIFF; **merge** the denoised channels back into one stack
+3. **Z-signal correction** on multi-z .tiff stacks — run **per channel** (see step 4)
+4. **Split / merge** (`synscope_img_util.py`) — **split** the multi-channel stack before z-signal; run z-signal on each single-channel .tiff images; **merge** the denoised channels back into one stack
 5. **Synapse detection** → `*_detected_puncta.nimp`
 6. **Synapse classification** → CSV predictions and grouped `.nimp` files
 
@@ -137,7 +137,7 @@ Each top-level script exposes a `main` block you can edit, or you can import and
 
 ### 1. Shading correction
 
-Corrects illumination inhomogeneity using BaSiC. Input is a **CZI** file; output is a multi-channel TIFF in the same folder (or `result_folder`).
+Corrects illumination inhomogeneity using BaSiC. Input is a **CZI** file; output is a multi-channel .tiff image in the same folder (or `result_folder`).
 
 ```python
 from synscope_shading_correction import shading_correction_convergence
@@ -174,7 +174,7 @@ python synscope_chromatic_shift_correction.py
 
 ### 3. Z-signal correction
 
-Denoises z-related signal variation in a **multi-frame TIFF** (one channel, z as frames) using ISCL (Lee et al., IEEE TMI 2021).
+Denoises z-related signal variation in a **multi-frame .tiff image** (one channel, z as frames) using ISCL (Lee et al., IEEE TMI 2021).
 
 Multi-channel images must be **split before** z-signal and **merged after**, using `synscope_img_util.py` (see also step 4 in [Typical workflow](#typical-workflow)).
 
