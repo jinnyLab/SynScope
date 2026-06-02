@@ -210,7 +210,7 @@ Repeat for each channel you want corrected (adjust `--data`, `--result_dir`, and
 
 **3. Merge channels**
 
-Place all denoised single-channel TIFFs in one folder (same naming pattern as after split), then merge:
+Place all denoised single-channel .tiff images in one folder (same naming pattern as after split), then merge:
 
 ```python
 from synscope_img_util import merge_channel
