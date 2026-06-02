@@ -62,7 +62,7 @@ conda install -y \
 conda install -y zimg -c fenglab   # our conda distribution (required; not on PyPI)
 ```
 
-**2. Pip (remaining dependencies)**
+**2. pip (remaining dependencies)**
 
 ```bash
 pip install --upgrade --no-cache-dir \
