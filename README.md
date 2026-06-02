@@ -32,9 +32,9 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 ## Features
 
 - **Image preprocessing**
-  - Shading correction (BaSiC flatfield on tiled CZI data)
-  - Chromatic shift correction (ANTs transforms for LSM780 / LSM980 confocal images)
-  - Z-signal correction (ISCL-based denoising on multi-frame TIFF stacks)
+  - Shading correction (BaSiC flatfield on tiled .czi data)
+  - Chromatic shift correction (ANTs transforms for confocal images)
+  - Z-signal correction (ISCL-based denoising on multi-frame .tiff stacks)
 
 - **Synapse processing**
   - mGRASP synpase detection
@@ -64,7 +64,7 @@ conda install -y \
 conda install -y zimg -c fenglab   # our conda distribution (required; not on PyPI)
 ```
 
-**2. Pip (remaining dependencies)**
+**2. pip (remaining dependencies)**
 
 ```bash
 pip install --upgrade --no-cache-dir \
@@ -76,7 +76,7 @@ pip install --upgrade --no-cache-dir \
 | Package | Source | Used for |
 |---------|--------|----------|
 | `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda | Arrays, stats, plotting, classification |
-| `zimg` | conda (`-c fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection (our conda distribution) |
+| `zimg` | conda (`-c fenglab`) | .czi / .tiff / `.nimp` I/O, puncta detection (our conda distribution) |
 | `opencv-python`, `tifffile`, `Pillow`, `tqdm` | pip | Image I/O, z-signal preprocessing |
 | `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
 | `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
