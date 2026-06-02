@@ -252,9 +252,9 @@ run_puncta_detection(
 ```
 
 Outputs include:
-- filename: `*_detected_puncta.nimp`, `*_detected_soma_puncta.nimp`, 
-- swc_name: `*_puncta.nimp`, `*_soma_puncta.nimp` 
-- logs: under `log/`.
+- filename: `*_detected_puncta.nimp`, `*_detected_soma_puncta.nimp`
+- if swc_name: `*_puncta.nimp`, `*_soma_puncta.nimp` 
+- logs: under `log/`
 
 ```bash
 python synscope_synapse_detection.py
