@@ -34,7 +34,7 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 - **Image preprocessing**
   - Shading correction (BaSiC flatfield on tiled .czi data)
   - Chromatic shift correction (ANTs transforms for confocal images)
-  - Z-signal correction (ISCL-based denoising on multi-frame .tiff stacks)
+  - Z-signal correction (ISCL-based z-depth signal correction on multi-frame .tiff stacks)
 
 - **Synapse processing**
   - mGRASP synpase detection
