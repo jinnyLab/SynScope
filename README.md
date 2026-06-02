@@ -50,38 +50,35 @@ Run all scripts from the **repository root** so paths to `model/` resolve correc
 Use **conda** for the scientific core and **`zimg`**, then **pip** for everything else.
 
 **1. Conda (main)**
-
 ```bash
 conda create -n synscope python=3.11 -y
 conda activate synscope
 conda config --append channels conda-forge
 
 conda install -y \
-  mkl numpy tbb scikit-learn scipy h5py cython ipykernel imageio protobuf future mock \
-  shapely pandas seaborn joblib anaconda-client conda-build ninja qt markdown \
-  scikit-image matplotlib mkl-service mkl_fft mkl_random
+  numpy scipy scikit-learn scikit-image pandas networkx tqdm pillow tifffile opencv \
+  tensorflow
 
 conda install -y zimg -c fenglab   # our conda distribution (required; not on PyPI)
 ```
 
-**2. pip (remaining dependencies)**
+**2. Pip (remaining dependencies)**
 
 ```bash
 pip install --upgrade --no-cache-dir \
-  opencv-python yacs anytree termcolor tabulate grpcio tensorboard \
-  catboost lightgbm natsort lap pycocotools itk itk-elastix antspyx tensorstore \
-  tifffile Pillow tqdm networkx tensorflow tensorflow-addons
+  tensorflow-addons antspyx
 ```
 
 | Package | Source | Used for |
 |---------|--------|----------|
-| `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda | Arrays, stats, plotting, classification |
-| `zimg` | conda (`-c fenglab`) | .czi / .tiff / `.nimp` I/O, puncta detection (our conda distribution) |
-| `opencv-python`, `tifffile`, `Pillow`, `tqdm` | pip | Image I/O, z-signal preprocessing |
-| `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
-| `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
-| `networkx`, `catboost`, `lightgbm` | pip | Classification graphs and models |
-| `tensorstore` | pip | Tensor I/O |
+| `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image` | conda | Arrays, stats, filtering, classification |
+| `zimg` | conda (`-c fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection (our conda distribution) |
+| `opencv`, `tifffile`, `pillow`, `tqdm` | conda | Image I/O, z-signal preprocessing |
+| `tensorflow` | conda | Z-signal (ISCL) inference |
+| `tensorflow-addons` | pip | ISCL training/inference helpers |
+| `antspyx` | pip | Chromatic shift registration |
+| `networkx` | conda | Classification graph features |
+
 
 ### Bundled models and parameters
 
