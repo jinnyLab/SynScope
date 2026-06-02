@@ -134,7 +134,7 @@ Each top-level script exposes a `main` block you can edit, or you can import and
 
 ### 1. Shading correction
 
-Corrects illumination inhomogeneity using BaSiC. Input is a **CZI** file; output is a multi-channel .tiff image in the same folder (or `result_folder`).
+Corrects illumination inhomogeneity using BaSiC. Input is a **.czi image** file; output is a multi-channel .tiff image in the same folder (or `result_folder`).
 
 ```python
 from synscope_shading_correction import shading_correction_convergence
