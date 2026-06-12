@@ -17,6 +17,7 @@ from tqdm import tqdm
 
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
+from skimage.exposure import match_histograms
 
 from utils.ISCL.utils.image_tool import *
 from utils.ISCL.utils.parser import parse_args
