@@ -1,8 +1,6 @@
 import os
-import sys
 
 from pathlib import Path,PurePath
-sys.path.append('../')
 
 import cv2
 import tifffile
@@ -10,14 +8,13 @@ import argparse
 import numpy as np
 
 import tensorflow as tf
-import tensorflow_addons as tf
+import tensorflow_addons as tfa
 
 from PIL import Image
 from tqdm import tqdm
 
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
-from skimage.exposure import match_histograms
 
 from utils.ISCL.utils.image_tool import *
 from utils.ISCL.utils.parser import parse_args
@@ -91,17 +88,15 @@ def main():
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--batch_size', type=int, default=16)
     parser.add_argument('--lr', type=float, default=1e-4)
-    parser.add_argument('--clean_slide', type=int, nargs='+')
-    parser.add_argument('--noisy_slide', type=int, nargs='+')
-    parser.add_argument('--target_range', type=int, nargs='+')
+    parser.add_argument('--clean_slide', type=int, nargs='+', required=True)
+    parser.add_argument('--noisy_slide', type=int, nargs='+', required=True)
+    parser.add_argument('--target_range', type=int, nargs='+', required=True)
     parser.add_argument('--ref_slide', type=int, default=3)
     parser.add_argument('--clip_limit', type=float, default=1.5)
     parser.add_argument('--training', type=str2bool, default=False)
-    parser.add_argument('--data', type=str, default=None)
-    parser.add_argument('--result_dir', type=str)
+    parser.add_argument('--data', type=str, required=True)
+    parser.add_argument('--result_dir', type=str, required=True)
     parser.add_argument('--dtype', type=str, default=None, choices=['uint8', 'uint16'])
-
-    # Load experiment setting
     args = parser.parse_args()
 
     os.makedirs(args.result_dir, exist_ok=True)

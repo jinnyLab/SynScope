@@ -1,8 +1,6 @@
 import os
-import sys
 
 from pathlib import Path, PurePath
-sys.path.append('../')
 
 import ants
 import numpy as np
@@ -35,7 +33,7 @@ def _infer_dtype(img_volume: np.ndarray) -> str:
 def apply_chromatic_correction(
     img_path: str,
     scope: str = 'lsm980',
-    output_suffix: str = '_chromatic_corrected',
+    output_suffix: str = '_chromatic_corrected.tiff',
     dtype: str = 'auto',
     moving_channel: int = 4
 ):
@@ -86,7 +84,7 @@ def apply_chromatic_correction(
 
     img_volume[moving_ch] = moved.numpy().astype(final_dtype)
 
-    output_name = PurePath(img_path).name.replace('_shading_corrected', output_suffix)
+    output_name = PurePath(img_path).name.replace('.tiff', output_suffix)
     output_path = os.path.join(PurePath(img_path).parent, output_name)
 
     img_util.write_img(filename=output_path, img_data=img_volume)

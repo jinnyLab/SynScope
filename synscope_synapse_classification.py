@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import glob
 import os
 import sys
 
@@ -18,8 +19,11 @@ from utils.synpase_classification.mGRASP_puncta_core_functions import (
     ClassifyConfig,
     load_data,
     compute_adaptive_thresholds,
+    apply_channel_threshold_multipliers,
     separate_axon_dendrite,
     process_punctum_channels,
+    _load_image_channels,
+    _sample_roi_intensities,
 )
 from utils.synpase_classification.mGRASP_puncta_inference import PairwiseOverlapClassifier
 
@@ -45,6 +49,169 @@ def _find_models() -> Optional[str]:
 
 # Default threshold for channel 5 pairs
 DEFAULT_CH5_OVERLAP_THRESH = 0.5
+
+
+def _clear_stale_group_nimp_files(output_dir: str, output_stem: str) -> None:
+    """Remove prior group .nimp outputs so reruns do not leave stale labels."""
+    for path in glob.glob(os.path.join(output_dir, f"{output_stem}_*.nimp")):
+        os.remove(path)
+
+
+def _classify_punctum_list(
+    punctum_list: List,
+    channel_map: Dict[int, np.ndarray],
+    output_dir: str,
+    output_stem: str,
+    model_dir: str,
+    overlap_thresh: float,
+    post_cell_channel: int,
+    mgrasp_channel: int,
+    use_axon_dendrite: bool,
+    axon_dendrite_image: Optional[np.ndarray],
+    channel_threshold_multipliers: Optional[Dict[int, float]] = None,
+) -> Dict[str, Any]:
+    """Classify a pre-loaded punctum list against pre-loaded channel images."""
+    os.makedirs(output_dir, exist_ok=True)
+
+    print("Step 1: Sampling ROI intensities...")
+    roi_intensity_samples = _sample_roi_intensities(punctum_list, channel_map)
+    print(f"  Loaded {len(punctum_list)} puncta")
+    print()
+
+    print("Step 2: Computing adaptive thresholds...")
+    classify_config = ClassifyConfig()
+    adaptive_thresholds = compute_adaptive_thresholds(roi_intensity_samples, classify_config)
+    adaptive_thresholds = apply_channel_threshold_multipliers(
+        adaptive_thresholds, channel_threshold_multipliers
+    )
+    if channel_threshold_multipliers:
+        print(f"  Applied channel threshold multipliers: {channel_threshold_multipliers}")
+    print()
+
+    axon_mask = None
+    dendrite_mask = None
+    if use_axon_dendrite and axon_dendrite_image is not None and post_cell_channel is not None:
+        print("Step 3: Separating axon/dendrite...")
+        axon_mask, dendrite_mask = separate_axon_dendrite(
+            axon_dendrite_image,
+            adaptive_thresh=adaptive_thresholds.get(post_cell_channel, 0.0),
+            thickness_thresh=classify_config.thickness_thresh,
+            soft_margin=classify_config.soft_margin,
+        )
+        print()
+
+    print("Step 4: Loading overlap models...")
+    classifier = PairwiseOverlapClassifier(
+        model_dir,
+        overlap_thresh=overlap_thresh,
+        ch5_overlap_thresh=DEFAULT_CH5_OVERLAP_THRESH,
+        use_model_overlap_threshold=True,
+    )
+    print("  Models loaded successfully")
+    print()
+
+    print("Step 5: Classifying puncta...")
+    results = []
+    puncta_groups = defaultdict(list)
+
+    excluded_channels = {mgrasp_channel}
+    if not use_axon_dendrite and post_cell_channel in channel_map:
+        excluded_channels.add(post_cell_channel)
+
+    for i, punctum in enumerate(punctum_list):
+        if (i + 1) % 100 == 0:
+            print(f"  Processed {i + 1}/{len(punctum_list)} puncta...")
+
+        z_mask_map, detected_channels = process_punctum_channels(
+            punctum,
+            channel_map,
+            adaptive_thresholds,
+            punctum_id=i,
+            excluded_channels=excluded_channels,
+            axon_mask=axon_mask,
+            axon_dendrite_channel=post_cell_channel if use_axon_dendrite else None,
+        )
+
+        if not detected_channels:
+            result = {
+                'punctum_id': i,
+                'final_prediction': 'low_confidence',
+                'final_confidence': 0.0,
+                'x': float(punctum.x),
+                'y': float(punctum.y),
+                'z': float(punctum.z),
+            }
+            results.append(result)
+            punctum.score = 0.0
+            puncta_groups['low_confidence'].append(punctum)
+            continue
+
+        try:
+            classification_result = classifier.predict_single_punctum(
+                punctum,
+                z_mask_map,
+                channel_map,
+                adaptive_thresholds,
+                axon_mask=axon_mask,
+                dendrite_mask=dendrite_mask,
+                mgrasp_channel=mgrasp_channel,
+            )
+
+            final_pred = classification_result.get('prediction', 'low_confidence')
+            final_conf = classification_result.get('confidence', 0.0)
+
+            result = {
+                'punctum_id': i,
+                'final_prediction': final_pred,
+                'final_confidence': float(final_conf),
+                'x': float(punctum.x),
+                'y': float(punctum.y),
+                'z': float(punctum.z),
+            }
+            results.append(result)
+            punctum.score = float(final_conf)
+            puncta_groups[final_pred].append(punctum)
+
+        except Exception as e:
+            print(f"  Warning: Error classifying punctum {i}: {e}")
+            result = {
+                'punctum_id': i,
+                'final_prediction': 'low_confidence',
+                'final_confidence': 0.0,
+                'x': float(punctum.x),
+                'y': float(punctum.y),
+                'z': float(punctum.z),
+            }
+            results.append(result)
+            punctum.score = 0.0
+            puncta_groups['low_confidence'].append(punctum)
+
+    print(f"  Completed: {len(results)} puncta classified")
+    print()
+
+    print("Step 6: Saving results...")
+    csv_path = os.path.join(output_dir, f"{output_stem}_predictions.csv")
+    results_df = pd.DataFrame(results)
+    results_df.to_csv(csv_path, index=False)
+    print(f"  Saved CSV: {csv_path}")
+
+    _clear_stale_group_nimp_files(output_dir, output_stem)
+    for group_name, plist in puncta_groups.items():
+        if not plist:
+            continue
+        nimp_path = os.path.join(output_dir, f"{output_stem}_{group_name}.nimp")
+        try:
+            ZPuncta(plist).save(nimp_path)
+            print(f"  Saved {group_name}: {len(plist)} puncta -> {nimp_path}")
+        except Exception as e:
+            print(f"  Warning: Failed to save {group_name}: {e}")
+
+    return {
+        'results': results,
+        'puncta_groups': dict(puncta_groups),
+        'n_predictions': len(results),
+        'output_dir': output_dir,
+    }
 
 
 def classify_puncta(
@@ -108,7 +275,7 @@ def classify_puncta(
         img_folder,
         img_name,
         mgrasp_channel=mgrasp_channel,
-        post_cell_channel=post_cell_channel if use_axon_dendrite else None,
+        axon_dendrite_channel=post_cell_channel if use_axon_dendrite else None,
         use_axon_dendrite=use_axon_dendrite,
     )
     print(f"  Loaded {len(punctum_list)} puncta")
@@ -118,6 +285,11 @@ def classify_puncta(
     print("Step 2: Computing adaptive thresholds...")
     classify_config = ClassifyConfig()
     adaptive_thresholds = compute_adaptive_thresholds(roi_intensity_samples, classify_config)
+    adaptive_thresholds = apply_channel_threshold_multipliers(
+        adaptive_thresholds, channel_threshold_multipliers
+    )
+    if channel_threshold_multipliers:
+        print(f"  Applied channel threshold multipliers: {channel_threshold_multipliers}")
 
     print()
 
@@ -141,6 +313,7 @@ def classify_puncta(
             model_dir,
             overlap_thresh=overlap_thresh,
             ch5_overlap_thresh=DEFAULT_CH5_OVERLAP_THRESH,
+            use_model_overlap_threshold=True,
         )
         print("  Models loaded successfully")
         print()
@@ -169,7 +342,7 @@ def classify_puncta(
             punctum_id=i,
             excluded_channels=excluded_channels,
             axon_mask=axon_mask,
-            post_cell_channel=post_cell_channel if use_axon_dendrite else None,
+            axon_dendrite_channel=post_cell_channel if use_axon_dendrite else None,
         )
 
         if not detected_channels:
@@ -183,6 +356,7 @@ def classify_puncta(
                 'z': float(punctum.z),
             }
             results.append(result)
+            punctum.score = 0.0
             puncta_groups['low_confidence'].append(punctum)
             continue
 
@@ -210,6 +384,7 @@ def classify_puncta(
                 'z': float(punctum.z),
             }
             results.append(result)
+            punctum.score = float(final_conf)
             puncta_groups[final_pred].append(punctum)
 
         except Exception as e:
@@ -223,6 +398,7 @@ def classify_puncta(
                 'z': float(punctum.z),
             }
             results.append(result)
+            punctum.score = 0.0
             puncta_groups['low_confidence'].append(punctum)
 
     print(f"  Completed: {len(results)} puncta classified")
@@ -238,6 +414,7 @@ def classify_puncta(
     results_df.to_csv(csv_path, index=False)
     print(f"  Saved CSV: {csv_path}")
 
+    _clear_stale_group_nimp_files(output_dir, stem)
     # Save grouped .nimp files
     for group_name, plist in puncta_groups.items():
         if not plist:

@@ -7,10 +7,8 @@ used by the ML-based classification pipeline.
 """
 
 import os
-import sys
 
 from pathlib import Path,PurePath
-sys.path.append('../')
 
 from zimg import *
 
@@ -18,6 +16,7 @@ from dataclasses import dataclass
 from typing import Dict, Tuple, List, Optional, Union
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from sklearn.mixture import GaussianMixture
@@ -99,6 +98,56 @@ def compute_adaptive_thresholds(roi_intensity_samples: Dict[int, List[float]], c
     return adaptive_thresholds
 
 
+def apply_channel_threshold_multipliers(
+    adaptive_thresholds: Dict[int, float],
+    multipliers: Optional[Dict[int, float]] = None,
+) -> Dict[int, float]:
+    """Scale per-channel adaptive thresholds by optional multipliers."""
+    if not multipliers:
+        return adaptive_thresholds
+    return {
+        ch: float(thr) * float(multipliers.get(ch, 1.0))
+        for ch, thr in adaptive_thresholds.items()
+    }
+
+
+def channel_intensity_threshold_dataframe(
+    base_thresholds: Dict[int, float],
+    final_thresholds: Dict[int, float],
+    multipliers: Optional[Dict[int, float]] = None,
+) -> pd.DataFrame:
+    """Build a per-channel report of intensity detection thresholds."""
+    rows = []
+    for ch in sorted(final_thresholds):
+        multiplier = float(multipliers.get(ch, 1.0)) if multipliers else 1.0
+        rows.append(
+            {
+                "channel": ch,
+                "base_threshold": float(base_thresholds.get(ch, final_thresholds[ch])),
+                "multiplier": multiplier,
+                "final_threshold": float(final_thresholds[ch]),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def print_channel_intensity_thresholds(
+    base_thresholds: Dict[int, float],
+    final_thresholds: Dict[int, float],
+    multipliers: Optional[Dict[int, float]] = None,
+) -> None:
+    """Print per-channel intensity thresholds used for signal detection."""
+    print("  Channel intensity thresholds:")
+    for ch in sorted(final_thresholds):
+        multiplier = float(multipliers.get(ch, 1.0)) if multipliers else 1.0
+        base = float(base_thresholds.get(ch, final_thresholds[ch]))
+        final = float(final_thresholds[ch])
+        print(
+            f"    Channel {ch}: final={final:.4f} "
+            f"(base={base:.4f}, multiplier={multiplier:.3f})"
+        )
+
+
 # =========================
 # Axon / Dendrite Functions
 # =========================
@@ -141,6 +190,304 @@ def separate_axon_dendrite(ch2_image: np.ndarray, adaptive_thresh: float, thickn
 # Data Loading Functions
 # =========================
 
+_X_COLUMN_ALIASES = frozenset({"x", "punctum x", "punctumx", "coord x"})
+_Y_COLUMN_ALIASES = frozenset({"y", "punctum y", "punctumy", "coord y"})
+_Z_COLUMN_ALIASES = frozenset({"z", "punctum z", "punctumz", "coord z"})
+
+
+@dataclass
+class CsvPunctum:
+    """Minimal punctum object constructed from x, y, z coordinates."""
+    x: float
+    y: float
+    z: float
+    voxelLocations: np.ndarray
+
+    @classmethod
+    def from_coordinates(
+        cls,
+        x: float,
+        y: float,
+        z: float,
+        voxel_patch_size: int = 5,
+    ) -> "CsvPunctum":
+        xi, yi, zi = int(round(x)), int(round(y)), int(round(z))
+        half_low = voxel_patch_size // 2
+        offsets = range(-half_low, voxel_patch_size - half_low)
+        voxels = [
+            [xi + dx, yi + dy, zi]
+            for dx in offsets
+            for dy in offsets
+        ]
+        return cls(
+            x=float(x),
+            y=float(y),
+            z=float(z),
+            voxelLocations=np.array(voxels, dtype=np.float64),
+        )
+
+    def to_zpunctum(self):
+        """Convert to a zimg ZPunctum for .nimp export."""
+        punctum = ZPunctum()
+        voxels = np.asarray(self.voxelLocations, dtype=np.int32)
+        punctum.voxelLocations = voxels
+        punctum.voxelIntensities = np.ones(len(voxels), dtype=np.float32)
+        punctum.updateFromVoxelsList()
+        return punctum
+
+
+def _normalize_column_name(column: str) -> str:
+    return column.strip().lower().replace("_", " ")
+
+
+def _resolve_xyz_columns(columns) -> Tuple[str, str, str]:
+    x_col = y_col = z_col = None
+    for col in columns:
+        normalized = _normalize_column_name(col)
+        if normalized in _X_COLUMN_ALIASES:
+            x_col = col
+        elif normalized in _Y_COLUMN_ALIASES:
+            y_col = col
+        elif normalized in _Z_COLUMN_ALIASES:
+            z_col = col
+    if x_col is None or y_col is None or z_col is None:
+        found = ", ".join(str(c) for c in columns)
+        raise ValueError(
+            "CSV must contain x, y, and z coordinate columns. "
+            "Accepted names include: x/y/z or punctum x/punctum y/punctum z. "
+            f"Found columns: {found}"
+        )
+    return x_col, y_col, z_col
+
+
+def _load_coordinate_csv(csv_path: str) -> pd.DataFrame:
+    """Load a coordinate CSV, skipping a leading title row when present."""
+    df = pd.read_csv(csv_path)
+    if not df.empty:
+        try:
+            _resolve_xyz_columns(df.columns)
+            return df
+        except ValueError:
+            pass
+
+    for skiprows in (1, 2):
+        df_candidate = pd.read_csv(csv_path, skiprows=skiprows)
+        if df_candidate.empty:
+            continue
+        try:
+            _resolve_xyz_columns(df_candidate.columns)
+            print(f"[INFO] Skipped {skiprows} leading row(s) in CSV header: {csv_path}")
+            return df_candidate
+        except ValueError:
+            continue
+
+    found = ", ".join(str(c) for c in df.columns)
+    raise ValueError(
+        "CSV must contain x, y, and z coordinate columns. "
+        "Accepted names include: x/y/z or punctum x/punctum y/punctum z. "
+        f"Found columns: {found}"
+    )
+
+
+def resolve_voxel_patch_size(
+    voxel_patch_size: Optional[int] = None,
+    voxel_patch_radius: Optional[int] = None,
+) -> int:
+    """
+    Resolve square voxel patch side length from size or radius.
+
+    Examples: size 5 or radius 2 -> 5x5 patch; size 10 -> 10x10 patch.
+    """
+    if voxel_patch_size is not None and voxel_patch_radius is not None:
+        raise ValueError("Specify only one of voxel_patch_size or voxel_patch_radius.")
+
+    if voxel_patch_size is not None:
+        if voxel_patch_size < 1:
+            raise ValueError("voxel_patch_size must be >= 1.")
+        return voxel_patch_size
+
+    if voxel_patch_radius is not None:
+        if voxel_patch_radius < 0:
+            raise ValueError("voxel_patch_radius must be >= 0.")
+        return 2 * voxel_patch_radius + 1
+
+    return 5
+
+
+def read_puncta_coordinates_csv(
+    csv_path: str,
+    voxel_patch_size: int = 5,
+) -> List[CsvPunctum]:
+    """Load puncta coordinates from a CSV file."""
+    df = _load_coordinate_csv(csv_path)
+    if df.empty:
+        raise ValueError(f"No rows found in CSV: {csv_path}")
+
+    x_col, y_col, z_col = _resolve_xyz_columns(df.columns)
+    print(f"[INFO] Using CSV columns: x={x_col}, y={y_col}, z={z_col}")
+    punctum_list: List[CsvPunctum] = []
+
+    for row in df[[x_col, y_col, z_col]].itertuples(index=False, name=None):
+        x, y, z = row
+        if pd.isna(x) or pd.isna(y) or pd.isna(z):
+            continue
+        punctum_list.append(
+            CsvPunctum.from_coordinates(float(x), float(y), float(z), voxel_patch_size=voxel_patch_size)
+        )
+
+    if not punctum_list:
+        raise ValueError(f"No valid x, y, z coordinates found in CSV: {csv_path}")
+
+    print(f"[INFO] Loaded {len(punctum_list)} puncta from CSV: {csv_path}")
+    print(f"[INFO] Voxel patch size: {voxel_patch_size}x{voxel_patch_size}")
+    return punctum_list
+
+
+def _load_image_channels(
+    img_folder: str,
+    img_name: str,
+    mgrasp_channel: Optional[int] = None,
+    axon_dendrite_channel: Optional[int] = None,
+    use_axon_dendrite: bool = True,
+) -> Tuple[str, Dict[int, np.ndarray], Optional[np.ndarray], Dict[int, np.ndarray]]:
+    """Load multi-channel image data and return analysis channel maps."""
+    img_path = os.path.join(img_folder, img_name)
+    img_infos = ZImg.readImgInfos(img_path)
+    num_image_planes = img_infos[0].numChannels
+
+    if mgrasp_channel is not None:
+        if mgrasp_channel < 1 or mgrasp_channel > num_image_planes:
+            raise ValueError(f"mGRASP channel {mgrasp_channel} is out of range. Image has {num_image_planes} channels.")
+
+    if axon_dendrite_channel is not None:
+        if axon_dendrite_channel < 1 or axon_dendrite_channel > num_image_planes:
+            raise ValueError(
+                f"Axon/dendrite channel {axon_dendrite_channel} is out of range. "
+                f"Image has {num_image_planes} channels."
+            )
+        if mgrasp_channel is not None and axon_dendrite_channel == mgrasp_channel:
+            raise ValueError(
+                f"Axon/dendrite channel cannot be the same as mGRASP channel ({mgrasp_channel})."
+            )
+
+    imgObj = ZImg(img_path, scene=0, xRatio=1, yRatio=1)
+    img = imgObj.data[0]
+    if img.max() > 255:
+        img = np.asarray((img / img.max()) * 255.0, dtype=np.float32)
+
+    # Copy channel arrays so data remain valid after imgObj is released.
+    all_channels = {
+        i + 1: np.array(img[i], copy=True)
+        for i in range(num_image_planes)
+    }
+    if mgrasp_channel is None:
+        channel_map = dict(all_channels)
+    else:
+        channel_map = {ch: img_data for ch, img_data in all_channels.items() if ch != mgrasp_channel}
+
+    axon_dendrite_image = None
+    if axon_dendrite_channel is not None:
+        axon_dendrite_image = all_channels[axon_dendrite_channel]
+
+    if not use_axon_dendrite and axon_dendrite_channel is not None:
+        channel_map.pop(axon_dendrite_channel, None)
+
+    if not channel_map:
+        raise ValueError("No channels available for analysis.")
+
+    return img_name, channel_map, axon_dendrite_image, all_channels
+
+
+def _sample_roi_intensities(
+    punctum_list: List,
+    channel_map: Dict[int, np.ndarray],
+) -> Dict[int, List[float]]:
+    """Sample ROI intensities around puncta for adaptive thresholding."""
+    roi_intensity_samples = {ch: [] for ch in channel_map}
+    x_size, y_size = 5, 5
+
+    if len(punctum_list) == 0:
+        return roi_intensity_samples
+
+    for punctum in tqdm(punctum_list, desc="Sampling intensities from puncta"):
+        vl = getattr(punctum, 'voxelLocations', None)
+        if vl is None or getattr(vl, 'size', 0) == 0 or vl.shape[1] < 2:
+            continue
+        x_max, x_min = int(np.max(vl[:, 0])), int(np.min(vl[:, 0]))
+        y_max, y_min = int(np.max(vl[:, 1])), int(np.min(vl[:, 1]))
+        slice_z = int(punctum.z)
+        first_ch_img = next(iter(channel_map.values()))
+        max_z = first_ch_img.shape[0] - 1
+
+        if slice_z < 0:
+            slice_z_clamped = 0
+        elif slice_z > max_z:
+            slice_z_clamped = max_z
+        else:
+            slice_z_clamped = slice_z
+
+        for ch_num, ch_img in channel_map.items():
+            h, w = ch_img.shape[1:]
+            ch_max_z = ch_img.shape[0] - 1
+            if slice_z_clamped > ch_max_z:
+                slice_z_clamped_ch = ch_max_z
+            elif slice_z_clamped < 0:
+                slice_z_clamped_ch = 0
+            else:
+                slice_z_clamped_ch = slice_z_clamped
+
+            x1, x2 = max(0, x_min - x_size), min(w, x_max + x_size)
+            y1, y2 = max(0, y_min - y_size), min(h, y_max + y_size)
+            roi = ch_img[slice_z_clamped_ch, y1:y2, x1:x2]
+            if roi.size > 0:
+                # Use mean intensity per punctum to avoid unsafe uint8->float64
+                # casts on large zimg-backed array views.
+                roi_intensity_samples[ch_num].append(float(np.mean(roi, dtype=np.float32)))
+
+    return roi_intensity_samples
+
+
+def load_data_from_csv(
+    img_folder: str,
+    img_name: str,
+    csv_path: str,
+    axon_dendrite_channel: Optional[int] = None,
+    use_axon_dendrite: bool = True,
+    voxel_patch_size: Optional[int] = None,
+    voxel_patch_radius: Optional[int] = None,
+    mgrasp_channel: Optional[int] = None,
+):
+    """Load image data and puncta coordinates from a CSV file.
+
+    Args:
+        img_folder: Path to folder containing the image file
+        img_name: Name of the image file
+        csv_path: Path to CSV with x, y, z coordinate columns
+        axon_dendrite_channel: Channel to use for axon/dendrite morphology analysis (optional)
+        use_axon_dendrite: If True, axon_dendrite_channel is included in analysis; if False, excluded
+        voxel_patch_size: Side length of square voxel patch (odd integer, e.g. 5 for 5x5)
+        voxel_patch_radius: Patch radius in pixels (patch size = 2 * radius + 1)
+        mgrasp_channel: Optional mGRASP channel to exclude. If None, all channels are used.
+
+    Returns:
+        Tuple of (img_name, channel_map, axon_dendrite_image, punctum_list, roi_intensity_samples)
+    """
+    patch_size = resolve_voxel_patch_size(
+        voxel_patch_size=voxel_patch_size,
+        voxel_patch_radius=voxel_patch_radius,
+    )
+    img_name, channel_map, axon_dendrite_image, _ = _load_image_channels(
+        img_folder,
+        img_name,
+        mgrasp_channel=mgrasp_channel,
+        axon_dendrite_channel=axon_dendrite_channel,
+        use_axon_dendrite=use_axon_dendrite,
+    )
+    punctum_list = read_puncta_coordinates_csv(csv_path, voxel_patch_size=patch_size)
+    roi_intensity_samples = _sample_roi_intensities(punctum_list, channel_map)
+    return img_name, channel_map, axon_dendrite_image, punctum_list, roi_intensity_samples
+
+
 def load_data(
     img_folder: str,
     img_name: str,
@@ -163,50 +510,13 @@ def load_data(
                        and axon_dendrite_channel if use_axon_dendrite=False)
         - axon_dendrite_image: Image for axon/dendrite separation (None if not provided/used)
     """
-    img_path = os.path.join(img_folder, img_name)
-    img_infos = ZImg.readImgInfos(img_path)
-    num_image_planes = img_infos[0].numChannels
-
-    # Validate channel numbers
-    if mgrasp_channel < 1 or mgrasp_channel > num_image_planes:
-        raise ValueError(f"mGRASP channel {mgrasp_channel} is out of range. Image has {num_image_planes} channels.")
-
-    if axon_dendrite_channel is not None:
-        if axon_dendrite_channel < 1 or axon_dendrite_channel > num_image_planes:
-            raise ValueError(f"Axon/dendrite channel {axon_dendrite_channel} is out of range. Image has {num_image_planes} channels.")
-        if axon_dendrite_channel == mgrasp_channel:
-            raise ValueError(f"Axon/dendrite channel cannot be the same as mGRASP channel ({mgrasp_channel}).")
-
-    imgObj = ZImg(img_path, scene=0, xRatio=1, yRatio=1)
-    img = imgObj.data[0]
-    if img.max() > 255:
-        img = (img / img.max()) * 255.0
-
-    # Build channel_map for all available channels (1-indexed)
-    all_channels = {}
-    for i in range(num_image_planes):
-        all_channels[i + 1] = img[i]
-
-    # Always exclude mGRASP channel from analysis
-    channel_map = {ch: img_data for ch, img_data in all_channels.items() if ch != mgrasp_channel}
-
-    # Get axon/dendrite image if provided
-    axon_dendrite_image = None
-    if axon_dendrite_channel is not None:
-        axon_dendrite_image = all_channels[axon_dendrite_channel]
-
-    # Exclude axon_dendrite_channel from analysis if not used
-    if not use_axon_dendrite and axon_dendrite_channel is not None:
-        if axon_dendrite_channel in channel_map:
-            del channel_map[axon_dendrite_channel]
-
-    # Validate that we have at least one channel for analysis
-    if not channel_map:
-        raise ValueError(
-            f"No channels available for analysis. "
-            f"mGRASP channel {mgrasp_channel} is excluded, "
-            f"and axon/dendrite channel {axon_dendrite_channel} is also excluded."
-        )
+    img_name, channel_map, axon_dendrite_image, _ = _load_image_channels(
+        img_folder,
+        img_name,
+        mgrasp_channel=mgrasp_channel,
+        axon_dendrite_channel=axon_dendrite_channel,
+        use_axon_dendrite=use_axon_dendrite,
+    )
 
     punctum_list = []
     image_stem = os.path.splitext(img_name)[0]
@@ -257,47 +567,21 @@ def load_data(
     if nimp_files_to_load:
         print(f"[INFO] Loaded puncta from {len(nimp_files_to_load)} .nimp file(s): {nimp_files_to_load}")
 
-    roi_intensity_samples = {ch: [] for ch in channel_map}
-    x_size, y_size = 5, 5
-
-    # Sample ROIs from puncta locations
-    if len(punctum_list) > 0:
-        for punctum in tqdm(punctum_list, desc="Sampling intensities from puncta"):
-            x_max, x_min = int(np.max(punctum.voxelLocations[:, 0])), int(np.min(punctum.voxelLocations[:, 0]))
-            y_max, y_min = int(np.max(punctum.voxelLocations[:, 1])), int(np.min(punctum.voxelLocations[:, 1]))
-            slice_z = int(punctum.z)
-            first_ch_img = next(iter(channel_map.values()))
-            max_z = first_ch_img.shape[0] - 1
-
-            if slice_z < 0:
-                slice_z_clamped = 0
-            elif slice_z > max_z:
-                slice_z_clamped = max_z
-            else:
-                slice_z_clamped = slice_z
-
-            for ch_num, ch_img in channel_map.items():
-                h, w = ch_img.shape[1:]
-                ch_max_z = ch_img.shape[0] - 1
-                if slice_z_clamped > ch_max_z:
-                    slice_z_clamped_ch = ch_max_z
-                elif slice_z_clamped < 0:
-                    slice_z_clamped_ch = 0
-                else:
-                    slice_z_clamped_ch = slice_z_clamped
-
-                x1, x2 = max(0, x_min - x_size), min(w, x_max + x_size)
-                y1, y2 = max(0, y_min - y_size), min(h, y_max + y_size)
-                roi = ch_img[slice_z_clamped_ch, y1:y2, x1:x2]
-                if roi.size > 0:
-                    roi_intensity_samples[ch_num].extend(roi.flatten())
-
+    roi_intensity_samples = _sample_roi_intensities(punctum_list, channel_map)
     return img_name, channel_map, axon_dendrite_image, punctum_list, roi_intensity_samples
 
 
 # =========================
 # Utility Functions
 # =========================
+
+def normalize_channel_combination(channels: Union[List[int], Tuple[int, ...]]) -> str:
+    """Convert detected channel numbers to a canonical prediction label (e.g. [3, 1, 2] -> '1_2_3')."""
+    if not channels:
+        return "low_confidence"
+    unique_channels = sorted({int(ch) for ch in channels})
+    return "_".join(str(ch) for ch in unique_channels)
+
 
 def process_punctum_channels(
     punctum,

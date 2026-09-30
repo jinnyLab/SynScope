@@ -1,0 +1,14 @@
+# Pip packages imported by SynScope.
+# zimg is not on PyPI. Install it with environment.yml (conda channel fenglab).
+
+opencv-python
+tifffile
+Pillow
+tqdm
+networkx
+lightgbm==3.3.5
+tabulate
+termcolor
+antspyx
+tensorflow==2.16.2
+

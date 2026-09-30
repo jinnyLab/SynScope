@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import os
-import sys
 
 from pathlib import Path,PurePath
-sys.path.append('../')
 
 import numpy as np
 import tifffile

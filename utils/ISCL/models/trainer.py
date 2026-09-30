@@ -2,10 +2,8 @@ import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import Model
 import tensorflow_addons as tfa
-import sys
-sys.path.append('ISCL/')
-from MiddleRecon.models.network import Generator, Discriminator, Extractor
-from MiddleRecon.utils.metrics import PSNR, SSIM
+from .network import Generator, Discriminator, Extractor
+from ..utils.metrics import PSNR, SSIM
 
 class Trainer(Model):
     def __init__(self, args):

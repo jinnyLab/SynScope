@@ -1,0 +1,26 @@
+# conda env create -f environment.yml
+
+name: synscope
+channels:
+  - conda-forge
+  - fenglab
+dependencies:
+  - python=3.12
+  - numpy>=1.26,<2
+  - scipy
+  - pandas
+  - scikit-learn
+  - scikit-image
+  - fenglab::zimg
+  - pip
+  - pip:
+      - opencv-python
+      - tifffile
+      - Pillow
+      - tqdm
+      - networkx
+      - lightgbm==3.3.5
+      - tabulate
+      - termcolor
+      - antspyx
+      - tensorflow==2.16.2

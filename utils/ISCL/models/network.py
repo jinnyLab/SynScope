@@ -1,9 +1,7 @@
 import tensorflow as tf
 from tensorflow.keras import layers
 from tensorflow.keras import Model
-import sys
-sys.path.append('ISCL/')
-from MiddleRecon.utils.normalization import BIN, IN, BN
+from ..utils.normalization import BIN, IN, BN
 
 class Res_Block(Model):
     def __init__(self, num_filters, activation, initializer='he_normal'):

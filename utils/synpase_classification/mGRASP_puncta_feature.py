@@ -312,6 +312,8 @@ def compute_enhanced_features_for_punctum(
     total_pix_all = 0
     per_ch_pix = {ch: 0 for ch in [1, 2, 3, 4, 5]}
 
+    # Note: Channel 4 is mGRASP (excluded), but feature names use "ch4" for channel 5
+    # Map actual channel 5 to feature name "ch4"
     for ch in [1, 2, 3, 4, 5]:
         zmap = z_mask_map.get(ch, {})
         pix, bboxes = 0, []
@@ -340,6 +342,7 @@ def compute_enhanced_features_for_punctum(
                     sk = skeletonize(m.astype(bool))
                     morph_features['skeleton_len'].append(float(sk.sum()))
 
+        # Map channel 5 to feature name "ch4" (channel 4 is mGRASP, excluded)
         feature_ch = 4 if ch == 5 else ch
 
         # Store channel features

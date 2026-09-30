@@ -1,4 +1,28 @@
+import numpy as np
 from zimg import *
+
+import tifffile
+
+# Classic TIFF is limited to 4 GB; use BigTIFF above this threshold.
+BIGTIFF_BYTE_THRESHOLD = 2_000_000_000
+
+
+def _write_tiff_bigtiff(filename: str, img_data: np.ndarray, *,
+                        voxel_size_z: float = 1.) -> None:
+    """
+    Write a (C x D x H x W) array as ImageJ-compatible BigTIFF hyperstack.
+    Uses zlib (Adobe deflate) so standard libtiff / Fiji / ZImg can read the file.
+  """
+    assert img_data.ndim == 4, img_data.shape
+    page_data = np.ascontiguousarray(np.moveaxis(img_data, 0, 1))
+    tifffile.imwrite(
+        filename,
+        page_data,
+        bigtiff=True,
+        compression='zlib',
+        imagej=True,
+        metadata={'axes': 'ZCYX', 'spacing': float(voxel_size_z)},
+    )
 
 
 def pad_img(img_data: np.ndarray, *,
@@ -96,6 +120,10 @@ def write_img(filename: str, img_data: np.ndarray, *,
     pad_data = np.ascontiguousarray(
         pad_img(img_data, des_channel=des_channel, des_depth=des_depth, des_height=des_height,
                 des_width=des_width, pad_before_ratio=pad_before_ratio))
+
+    if pad_data.nbytes >= BIGTIFF_BYTE_THRESHOLD:
+        _write_tiff_bigtiff(filename, pad_data, voxel_size_z=voxel_size_z)
+        return
 
     info = ZImgInfo()
     info.voxelSizeUnit = voxel_size_unit

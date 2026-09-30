@@ -181,8 +181,7 @@ def export_csv(image_path, output_csv, clean_slices, noisy_slices, reference_sli
 
 
 if __name__ == "__main__":
-    test_image_path = \
-        "/Volumes/shared/Personal/Yoonkyoung/2A/denoising_test/0_merge_split_test/JK1205_2_8_MTS1_Airyscan_Processing_5_downsampled.tiff"
+    test_image_path = "path/to/image.tiff"
 
     clean, noisy, reference, z_range = find_clean_noisy_reference(test_image_path, channel=4)
 

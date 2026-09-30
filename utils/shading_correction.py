@@ -1,7 +1,4 @@
 import os
-import sys
-
-sys.path.append('../')
 
 import numpy as np
 import scipy
@@ -10,7 +7,7 @@ import skimage.exposure
 import logging
 
 from zimg import *
-from utils import img_util, io
+from utils import img_util
 
 logger = logging.getLogger(__name__)
 

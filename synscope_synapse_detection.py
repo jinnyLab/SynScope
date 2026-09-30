@@ -1,8 +1,6 @@
 import os
-import sys
 
 from pathlib import Path,PurePath
-sys.path.append('../')
 
 from zimg import *
 
@@ -105,10 +103,10 @@ def run_puncta_detection(
 
 if __name__ == "__main__":
 
-    image_folder = 'path/to/image/folder'
-    filename = 'image_name.tiff'
+    image_folder = "path/to/images"
+    filename = "sample.tiff"
 
-    swc_name = None # set to None if you don't want to use an SWC
+    swc_name = None  # or a filename in image_folder, e.g. "dendrite.swc"
 
     threshold = -1
     mGRASP_channel = 4
