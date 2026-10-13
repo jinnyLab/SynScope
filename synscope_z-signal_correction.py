@@ -3,7 +3,6 @@ import os
 from pathlib import Path,PurePath
 
 import cv2
-import tifffile
 import argparse
 import numpy as np
 
@@ -12,7 +11,10 @@ import tensorflow_addons as tfa
 
 from PIL import Image
 from tqdm import tqdm
+from zimg import ZImg
+from utils import img_util
 
+from skimage.exposure import match_histograms
 from skimage.metrics import peak_signal_noise_ratio as psnr
 from skimage.metrics import structural_similarity as ssim
 
@@ -168,7 +170,16 @@ def main():
         # For uint8, just clip and cast
         output_uint = np.clip(output, 0, 255).astype(np.uint8)
 
-    tifffile.imwrite(os.path.join(args.result_dir, fname + "_denoised_image.tiff"), output_uint)
+    out_path = os.path.join(args.result_dir, fname + "_denoised_image.tiff")
+    info = ZImg.readImgInfos(args.data)[0]
+    img_util.write_img(
+        filename=out_path,
+        img_data=output_uint,
+        voxel_size_unit=info.voxelSizeUnit,
+        voxel_size_x=info.voxelSizeX,
+        voxel_size_y=info.voxelSizeY,
+        voxel_size_z=info.voxelSizeZ,
+    )
 
 if __name__ == '__main__':
     main()

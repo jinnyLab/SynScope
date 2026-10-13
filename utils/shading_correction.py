@@ -331,9 +331,7 @@ def correct_shading(input_filename, scene: int, *,
                     output_filename: str=None,
                     inverse_channels: tuple = tuple(),
                     correct_background_channels: tuple = tuple(),
-                    correct_background_method: str = 'annotation',  # annotation or BaSiC or annotation_interpolate
-                    correct_background_annotation: str = None,
-                    correct_background_annotation_slice_idx=None,
+                    correct_background_method: str = 'BaSiC',  # BaSiC or annotation_interpolate
                     correct_background_mask: np.ndarray = None,
                     tile_overlap_ratio: float = 0.05,
                     normalize_intensity_channels: tuple = tuple(),
@@ -370,8 +368,8 @@ def correct_shading(input_filename, scene: int, *,
         # print(ch, np.iinfo(img_dtype).max)
         stacked_tiles[ch, :, :, :] = np.iinfo(img_dtype).max - stacked_tiles[ch, :, :, :]
 
-    if correct_background_method == 'annotation' or correct_background_method == 'annotation_interpolate':
-        assert correct_background_annotation is not None or correct_background_mask is not None
+    if correct_background_method == 'annotation_interpolate':
+        assert correct_background_mask is not None
 
     for ch in range(nchs):
         flatfield, darkfield = BaSiC(stacked_tiles[ch, :, :, :], estimate_darkfield=True)
@@ -382,32 +380,11 @@ def correct_shading(input_filename, scene: int, *,
 
                     corrected_tile = (stacked_tiles[ch, tile_idx, :, :].astype(np.float64) - darkfield) / flatfield - basefluor[tile_idx]
                     res_img[ch, tile.start.z:tile.end.z, tile.start.y:tile.end.y, tile.start.x:tile.end.x] += corrected_tile
-            elif correct_background_method == 'annotation':
-
-                ra_dict = region_annotation.read_region_annotation(correct_background_annotation)
-                annotation_mask = region_annotation.convert_region_annotation_dict_to_binary_mask(ra_dict,
-                                                                                                  height=infoList[scene].height,
-                                                                                                  width=infoList[scene].width,
-                                                                                                  slice_idx=correct_background_annotation_slice_idx)
-                for tile_idx, tile in enumerate(blockList[scene]):
-                    corrected_tile = (stacked_tiles[ch, tile_idx, :, :].astype(np.float64) - darkfield) / flatfield
-                    tile_region_mask = annotation_mask[tile.start.y:tile.end.y, tile.start.x:tile.end.x]
-                    if tile_region_mask.sum() / tile_region_mask.size < 0.9:
-                        corrected_tile[np.logical_not(tile_region_mask)] -= \
-                            np.median(corrected_tile[np.logical_not(tile_region_mask)])
-                    res_img[ch, tile.start.z:tile.end.z, tile.start.y:tile.end.y, tile.start.x:tile.end.x] += corrected_tile
             elif correct_background_method == 'annotation_interpolate':
-                if correct_background_mask is not None:
-                    assert correct_background_mask.ndim == 2 and \
-                           correct_background_mask.shape[0] == infoList[scene].height and \
-                           correct_background_mask.shape[1] == infoList[scene].width
-                    annotation_mask = correct_background_mask.astype(dtype=bool)
-                else:
-                    ra_dict = region_annotation.read_region_annotation(correct_background_annotation)
-                    annotation_mask = region_annotation.convert_region_annotation_dict_to_binary_mask(ra_dict,
-                                                                                                      height=infoList[scene].height,
-                                                                                                      width=infoList[scene].width,
-                                                                                                      slice_idx=correct_background_annotation_slice_idx)
+                assert correct_background_mask.ndim == 2 and \
+                       correct_background_mask.shape[0] == infoList[scene].height and \
+                       correct_background_mask.shape[1] == infoList[scene].width
+                annotation_mask = correct_background_mask.astype(dtype=bool)
 
                 for tile_idx, tile in enumerate(blockList[scene]):
                     tile_width = tile.end.x - tile.start.x
