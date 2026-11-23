@@ -2,116 +2,203 @@
 
 ## Overview
 
-SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence analysis. It provides an integrated pipeline for image preprocessing (shading, chromatic shift, and z-signal correction), mGRASP puncta detection, and puncta classification for presynaptic input convergence analysis.
+SynScope is a Python toolkit for multiplex **mGRASPi** synaptic convergence analysis. It provides an integrated pipeline for image preprocessing, mGRASP puncta detection, and puncta classification for presynaptic input convergence analysis.
 
-A web-based implementation of SynScope is available at http://synscope-mgrasp.com (access code: synscope)
+The pipeline includes:
+
+- Shading correction using BaSiC
+- Chromatic shift correction using ANTs
+- Z-signal correction using ISCL
+- mGRASP puncta detection
+- Synapse classification and assignment
+
+**Source code:** https://github.com/jinnyLab/SynScope
+
+**Online demo:** https://synscope-mgrasp.com  
+**Access code:** `synscope`
 
 ## Quick start
 
 ```bash
-git clone <https://github.com/jinnyLab/SynScope.git>
+git clone https://github.com/jinnyLab/SynScope.git
 cd SynScope
-
-conda create -n synscope python=3.11 -y
-conda activate synscope
-conda config --append channels conda-forge
-
-# See "Installation" below for the full conda + pip setup
 ```
 
-Run all scripts from the **repository root** so paths to `model/` resolve correctly.
+See the Installation section below for environment setup.
 
-| Step | Command / script | Typical output |
-|------|------------------|----------------|
-| 1. Shading | `python synscope_shading_correction.py` | `*_shading_corrected.tiff` |
-| 2. Chromatic | `python synscope_chromatic_shift_correction.py` | `*_chromatic_corrected.tiff` |
-| 3. Z-signal | split → `synscope_z-signal_correction.py` → merge | per-channel `*_denoised_image.tiff`, then `*_merged.tiff` |
-| 4. Detection | `python synscope_synapse_detection.py` | `*_detected_puncta.nimp` |
-| 5. Classification | `python synscope_synapse_classification.py` | `*_predictions.csv`, grouped `.nimp` |
+Run all scripts from the **repository root** so that paths to `model/` and `utils/` resolve correctly.
 
-## Features
+| Step | Script / operation | Typical output |
+|---|---|---|
+| 1. Shading correction | `synscope_shading_correction.py` | `*_shading_corrected.tiff` |
+| 2. Chromatic shift correction | `synscope_chromatic_shift_correction.py` | `*_chromatic_corrected.tiff` |
+| 3. Z-signal correction | Split → correction → merge | `*_denoised_image.tiff`, `*_merged.tiff` |
+| 4. Puncta detection | `synscope_synapse_detection.py` | `*_detected_puncta.nimp` |
+| 5. Classification | `synscope_synapse_classification.py` | `*_predictions.csv`, grouped `.nimp` files |
 
-- **Image preprocessing**
-  - Shading correction (BaSiC flatfield on tiled CZI data)
-  - Chromatic shift correction (ANTs transforms for LSM780 / LSM980 confocal images)
-  - Z-signal correction (ISCL-based denoising on multi-frame TIFF stacks)
+## System requirements
 
-- **Synapse processing**
-  - mGRASP synapse detection
-  - Synapse classification / assignment
+### Tested environment
 
-## Requirements
+SynScope was tested using the following software environment:
 
-- Python 3.11
-- [Conda](https://docs.conda.io/) (primary environment manager)
+| Component | Tested version |
+|---|---|
+| Operating system | Ubuntu 20.04.2 LTS |
+| Python | 3.10.13 |
+| NumPy | 1.26.4 |
+| SciPy | 1.11.4 |
+| pandas | 2.2.1 |
+| scikit-learn | 1.3.0 |
+| scikit-image | 0.22.0 |
+| TensorFlow | 2.13.0 |
+| LightGBM | 3.3.5 |
+| ANTsPy | 0.3.8 |
+| OpenCV | 4.10.0 |
+| ITK | 5.3.0 |
+| ITK-Elastix | 0.17.1 |
+| NetworkX | 3.1 |
+| zimg | 2023.07.13.10 |
 
-### Installation
+**Hardware:** The complete pipeline was tested on an NVIDIA DGX Station equipped with four Tesla V100-DGXS GPUs (16 GB each).
 
-Use **conda** for the scientific core and **`zimg`**, then **pip** for everything else.
+A GPU is recommended for ISCL-based z-signal correction. CPU execution is possible but may take considerably longer, particularly for large image stacks.
 
-**1. Conda (main)**
+## Installation
+
+### 1. Create the Conda environment
+
+Install Conda or Miniconda if it is not already available.
+
+Create and activate a new environment:
 
 ```bash
-conda create -n synscope python=3.11 -y
+conda create -n synscope python=3.10.13 -y
 conda activate synscope
-conda config --append channels conda-forge
-
-conda install -y \
-  mkl numpy tbb scikit-learn scipy h5py cython ipykernel imageio protobuf future mock \
-  shapely pandas seaborn joblib anaconda-client conda-build ninja qt markdown \
-  scikit-image matplotlib mkl-service mkl_fft mkl_random
-
-conda install -y zimg -c fenglab   # our conda distribution (required; not on PyPI)
 ```
 
-**2. Pip (remaining dependencies)**
+### 2. Install dependencies
+
+Install the scientific computing packages:
 
 ```bash
-pip install --upgrade --no-cache-dir \
-  opencv-python yacs anytree termcolor tabulate grpcio tensorboard \
-  catboost lightgbm natsort lap pycocotools itk itk-elastix antspyx tensorstore \
-  tifffile Pillow tqdm networkx tensorflow tensorflow-addons
+conda install -y -c conda-forge \
+    numpy=1.26.4 \
+    scipy=1.11.4 \
+    pandas=2.2.1 \
+    scikit-learn=1.3.0 \
+    scikit-image=0.22.0 \
+    networkx=3.1 \
+    h5py \
+    joblib
 ```
 
-| Package | Source | Used for |
-|---------|--------|----------|
-| `numpy`, `scipy`, `pandas`, `scikit-learn`, `scikit-image`, `matplotlib` | conda | Arrays, stats, plotting, classification |
-| `zimg` | conda (`-c fenglab`) | CZI / TIFF / `.nimp` I/O, puncta detection (our conda distribution) |
-| `opencv-python`, `tifffile`, `Pillow`, `tqdm` | pip | Image I/O, z-signal preprocessing |
-| `tensorflow`, `tensorflow-addons` | pip | Z-signal (ISCL) inference |
-| `antspyx`, `itk`, `itk-elastix` | pip | Chromatic shift registration |
-| `networkx`, `catboost`, `lightgbm` | pip | Classification graphs and models |
-| `tensorstore` | pip | Tensor I/O |
+Install `zimg` from the FengLab Conda channel:
 
-### Bundled models and parameters
+```bash
+conda install -y -c fenglab zimg
+```
 
-Pretrained assets live under `model/`:
+Install the remaining Python dependencies:
+
+```bash
+pip install \
+    opencv-python==4.10.0 \
+    tifffile \
+    Pillow \
+    tqdm \
+    lightgbm==3.3.5 \
+    tabulate \
+    termcolor \
+    antspyx==0.3.8 \
+    tensorflow==2.13.0 \
+    tensorflow-addons==0.23.0 \
+    itk==5.3.0 \
+    itk-elastix==0.17.1
+```
+
+### 3. Verify the installation
+
+Run the following commands to check that the main dependencies are available:
+
+```python
+import numpy
+import scipy
+import pandas
+import sklearn
+import skimage
+import tensorflow
+import lightgbm
+import ants
+import cv2
+import zimg
+
+print("SynScope dependencies imported successfully.")
+```
+
+### Installation time
+
+Installation takes approximately **1 hour on a standard desktop computer**. Actual installation time may vary depending on internet connection speed, hardware, and package dependency resolution.
+
+## Demo dataset and instructions
+
+A sample microscopy dataset for demonstrating the complete SynScope pipeline is provided separately from the GitHub repository.
+
+The demo dataset includes instructions and reference outputs to help users verify the results at each processing stage.
+
+### Demo workflow and expected outputs
+
+The demo covers the complete SynScope workflow, from image preprocessing to mGRASP puncta detection and classification.
+
+| Processing step | Description | Expected output |
+|---|---|---|
+| 1. Shading correction | Corrects illumination inhomogeneity in raw microscopy images using BaSiC. | `*_shading_corrected.tiff` |
+| 2. Chromatic shift correction | Aligns fluorescence channels to correct chromatic displacement. | `*_chromatic_corrected.tiff` |
+| 3. Z-signal correction | Corrects signal attenuation across z-planes using ISCL. | `*_denoised_image.tiff` |
+| 4. Channel merging | Recombines individually processed channels into a multichannel image. | `*_merged.tiff` |
+| 5. mGRASP puncta detection | Detects mGRASP-positive synaptic puncta. | `*_detected_puncta.nimp` and `*_detected_soma_puncta.nimp` |
+| 6. Puncta classification | Classifies detected puncta according to presynaptic input identity. | `*_predictions.csv` and grouped `*.nimp` files |
+
+The main output files include:
+
+- **Preprocessed microscopy images:** Multichannel TIFF files after shading, chromatic shift, and z-signal correction.
+- **Detected puncta:** `.nimp` files containing detected mGRASP puncta.
+- **Classification results:** CSV files containing puncta classification predictions.
+- **Grouped puncta:** `.nimp` files containing puncta assigned to individual presynaptic input groups.
+
+### Expected runtime
+
+The complete demo workflow typically takes approximately **1–2 hours on a standard desktop computer**. Runtime depends on image dimensions, the number of channels and z-planes, and available hardware.
+
+## Bundled models and parameters
+
+Pretrained models and processing parameters are included under `model/`.
 
 | Path | Purpose |
-|------|---------|
+|---|---|
 | `model/_chromatic_shift_parameters/` | LSM780 / LSM980 chromatic shift transforms |
-| `model/_z_signal_model/` | ISCL weights (`my_model_F`, `my_model_H`) |
+| `model/_z_signal_model/` | ISCL model weights (`my_model_F`, `my_model_H`) |
 | `model/_assignment_model/` | Puncta classifier (`model.pkl`, `feature_names.json`) |
 
 ## Project structure
 
 ```text
 SynScope/
-├── synscope_shading_correction.py         # Shading correction entry point
-├── synscope_chromatic_shift_correction.py # Chromatic shift correction
-├── synscope_z-signal_correction.py        # Z-signal correction (ISCL)
-├── synscope_synapse_detection.py          # mGRASP puncta detection
-├── synscope_synapse_classification.py     # Puncta classification
-├── synscope_img_util.py                   # Image downsample / merge helpers
+├── synscope_shading_correction.py
+├── synscope_chromatic_shift_correction.py
+├── synscope_z-signal_correction.py
+├── synscope_synapse_detection.py
+├── synscope_synapse_classification.py
+├── synscope_img_util.py
 ├── utils/
-│   ├── export_puncta_info.py              # Export .nimp metadata to CSV
-│   ├── img_util.py                        # Read / write image utilities
-│   ├── shading_correction.py              # BaSiC shading core
-│   ├── synpase_classification/            # Puncta feature + inference code
+│   ├── export_puncta_info.py
+│   ├── img_util.py
+│   ├── shading_correction.py
+│   ├── synpase_classification/
 │   │   ├── mGRASP_puncta_core_functions.py
 │   │   ├── mGRASP_puncta_feature.py
 │   │   └── mGRASP_puncta_inference.py
-│   └── ISCL/                              # ISCL network (z-signal)
+│   └── ISCL/
 │       ├── models/
 │       └── utils/
 └── model/
@@ -122,35 +209,30 @@ SynScope/
 
 ## Typical workflow
 
-1. **Shading correction** on raw CZI → `*_shading_corrected.tiff`
-2. **Chromatic shift correction** on the shading-corrected stack
-3. **Z-signal correction** on multi-z TIFF stacks — run **per channel** (see step 4)
-4. **Split / merge** (`synscope_img_util.py`) — **split** the multi-channel stack before z-signal; run z-signal on each single-channel TIFF; **merge** the denoised channels back into one stack
-5. **Synapse detection** → `*_detected_puncta.nimp`
-6. **Synapse classification** → CSV predictions and grouped `.nimp` files
-
----
+1. **Shading correction** on raw CZI images.
+2. **Chromatic shift correction** on the shading-corrected images.
+3. **Channel splitting** before z-signal correction.
+4. **Z-signal correction** on each single-channel TIFF stack.
+5. **Channel merging** to reconstruct the multichannel image.
+6. **Synapse detection** to identify mGRASP puncta.
+7. **Synapse classification** to assign detected puncta to presynaptic input groups.
 
 ## Usage
 
-Each top-level script exposes a `main` block you can edit, or you can import and call the functions from your own driver script.
+Each top-level script can be run independently or imported into a custom Python workflow. The following examples illustrate the main functions.
 
 ### 1. Shading correction
 
-Corrects illumination inhomogeneity using BaSiC. Input is a **CZI** file; output is a multi-channel TIFF in the same folder (or `result_folder`).
+Corrects illumination inhomogeneity using BaSiC. The input is a CZI file.
 
 ```python
 from synscope_shading_correction import shading_correction_convergence
 
 shading_correction_convergence(
     img_file="path/to/sample.czi",
-    result_folder=None,              # default: same directory as input
-    channels_to_correct=None,        # None = all channels; or e.g. [1, 2]
+    result_folder=None,
+    channels_to_correct=None,
 )
-```
-
-```bash
-python synscope_shading_correction.py
 ```
 
 ### 2. Chromatic shift correction
@@ -162,23 +244,17 @@ from synscope_chromatic_shift_correction import apply_chromatic_correction
 
 apply_chromatic_correction(
     img_path="path/to/sample_shading_corrected.tiff",
-    scope="lsm980",                  # "lsm980", "lsm780", or "calculate"
-    moving_channel=4,                # 1–5 (1-based)
-    dtype="auto",                    # "auto", "uint8", or "uint16"
+    scope="lsm980",
+    moving_channel=4,
+    dtype="auto",
 )
-```
-
-```bash
-python synscope_chromatic_shift_correction.py
 ```
 
 ### 3. Z-signal correction
 
-Denoises z-related signal variation in a **multi-frame TIFF** (one channel, z as frames) using ISCL (Lee et al., IEEE TMI 2021).
+Uses ISCL to denoise z-related signal variation in multi-frame TIFF stacks. Multi-channel images must be split before correction and merged afterward.
 
-Multi-channel images must be **split before** z-signal and **merged after**, using `synscope_img_util.py` (see also step 4 in [Typical workflow](#typical-workflow)).
-
-**1. Split channels**
+**Split channels:**
 
 ```python
 from synscope_img_util import channel_split
@@ -186,14 +262,13 @@ from synscope_img_util import channel_split
 channel_split(
     image_folder="path/to/images",
     filename="sample_chromatic_corrected.tiff",
-    result_folder="path/to/images/channel_split",  # default: {image_folder}/channel_split
+    result_folder="path/to/images/channel_split",
 )
-# Writes sample_chromatic_corrected_ch1.tiff, _ch2.tiff, ...
 ```
 
-**2. Run z-signal on each channel**
+**Run z-signal correction:**
 
-**Model layout:** inference loads weights from `{result_dir}/model/my_model_F` and `my_model_H`. Copy the bundled checkpoint once, then run per channel:
+The inference model expects the bundled weights under `{result_dir}/model/`.
 
 ```bash
 mkdir -p ./z_signal_run/model
@@ -209,34 +284,19 @@ python synscope_z-signal_correction.py \
   --training false
 ```
 
-Repeat for each channel you want corrected (adjust `--data`, `--result_dir`, and slide indices as needed). Outputs are `*_denoised_image.tiff` under each channel’s `result_dir`.
+Repeat for each channel to be corrected.
 
-**3. Merge channels**
-
-Place all denoised single-channel TIFFs in one folder (same naming pattern as after split), then merge:
+**Merge channels:**
 
 ```python
 from synscope_img_util import merge_channel
 
 merge_channel("path/to/denoised_channels_folder")
-# Writes {stem}_merged.tiff
 ```
-
-Use `--training true` only when fitting a new model (weights are saved under `{result_dir}/model/`).
-
-| Argument | Description |
-|----------|-------------|
-| `--data` | Input multi-frame TIFF |
-| `--result_dir` | Output directory (writes `*_denoised_image.tiff`; must contain `model/my_model_*` for inference) |
-| `--clean_slide` / `--noisy_slide` | Frame indices used to define clean–noisy training pairs for ISCL; the number of indices must be identical |
-| `--target_range` | Z range to enhance with histogram matching |
-| `--ref_slide` | Reference frame for histogram matching |
-| `--training` | `true` to train, `false` to run inference (use lowercase strings) |
-
 
 ### 4. Synapse (puncta) detection
 
-Runs mGRASP puncta detection (Feng et al., Bioinformatics 2012). Requires a multi-channel image and voxel sizes in µm.
+Detects mGRASP puncta from multichannel microscopy images. Voxel dimensions must be provided in micrometers.
 
 ```python
 from synscope_synapse_detection import run_puncta_detection
@@ -246,23 +306,19 @@ run_puncta_detection(
     filename="sample.tiff",
     mGRASP_channel=4,
     dendrite_channel=2,
-    threshold=-1,                  # -1 = automatic
+    threshold=-1,
     voxelSize_X=0.23,
     voxelSize_Y=0.23,
     voxelSize_Z=0.5,
-    swc_name=None,                 # optional dendrite SWC
+    swc_name=None,
 )
 ```
 
-Outputs include `*_detected_puncta.nimp`, `*_detected_soma_puncta.nimp`, and logs under `log/`.
-
-```bash
-python synscope_synapse_detection.py
-```
+Outputs include detected puncta `.nimp` files and processing logs.
 
 ### 5. Synapse classification
 
-Assigns detected puncta to convergence groups using the model in `model/_assignment_model/` (auto-detected when `model_dir` is omitted).
+Assigns detected puncta to presynaptic convergence groups using the pretrained classifier.
 
 ```python
 from synscope_synapse_classification import classify_puncta
@@ -278,15 +334,11 @@ results = classify_puncta(
 )
 ```
 
-Writes `{stem}_predictions.csv` and per-group `{stem}_{group}.nimp` files under the output directory.
-
-```bash
-python synscope_synapse_classification.py
-```
+The output includes a CSV prediction file and individual `.nimp` files for each classified group.
 
 ### 6. Export puncta metadata
 
-Converts `.nimp` files in a folder to CSV summaries (coordinates, intensity, volume, etc.).
+Converts `.nimp` files into CSV summaries containing puncta information.
 
 ```python
 from utils.export_puncta_info import export_puncta_info
@@ -294,36 +346,31 @@ from utils.export_puncta_info import export_puncta_info
 export_puncta_info("path/to/puncta/folder")
 ```
 
----
-
 ## Troubleshooting
 
 | Issue | What to check |
-|-------|----------------|
-| `model/my_model_F` not found (z-signal) | Copy `model/_z_signal_model/my_model_*` into `{result_dir}/model/` (see above). |
-| Classification model not found | Ensure `model/_assignment_model/model.pkl` and `feature_names.json` exist; run from repo root. |
-| `zimg` import error | Install from conda channel: `conda install zimg -c fenglab` (not available on PyPI). |
-| Chromatic shift fails | Confirm `scope` is `lsm980`, `lsm780`, or `calculate`; files under `model/_chromatic_shift_parameters/` must be present. |
-| Z-signal uses wrong mode | Pass `--training false` (lowercase). Do not use `False` with capital F unless using the Python API directly. |
-| `clean_slide` / `noisy_slide` mismatch | Use the same number of indices for both lists, and keep every index within the TIFF frame range. |
-| `target_range` causes errors or odd enhancement | Pass two integers (`start end`) with `start < end`, and keep both inside valid frame indices. |
-| Empty or near-empty puncta detection | Verify `mGRASP_channel`, `dendrite_channel`, and voxel sizes (`voxelSize_X/Y/Z`) match the image metadata. |
-| Chromatic correction channel error | `moving_channel` is 1-based; confirm the selected channel exists in the input stack. |
-| Output intensity/bit depth looks wrong | Set `--dtype uint8` or `--dtype uint16` explicitly instead of relying on auto inference. |
-| Z-signal is very slow | GPU is recommended; if running on CPU, expect slower inference/training for large stacks. |
-| Out-of-memory during z-signal | Reduce stack size/frame count, close other GPU jobs, or run on CPU with smaller batches/workloads. |
-| Split/merge output looks incorrect | Run z-signal on each split channel TIFF, and keep only intended channel TIFFs in the merge folder before `merge_channel`. |
-| `.nimp` missing during classification | Run puncta detection first and confirm `.nimp` outputs are in the folder used by classification. |
-| Import/path errors when running scripts | Execute from repository root so relative `model/` and `utils/` paths resolve correctly. |
-| `zimg` installed but import still fails | Activate the same conda env where `zimg` was installed and verify with `conda list | rg zimg`. |
-
----
+|---|---|
+| `zimg` import error | Install `zimg` from the FengLab Conda channel and activate the correct environment. |
+| Z-signal model not found | Copy `my_model_F` and `my_model_H` into `{result_dir}/model/`. |
+| Classification model not found | Confirm that `model/_assignment_model/model.pkl` and `feature_names.json` exist. |
+| Chromatic shift correction fails | Check the selected scope and confirm that the corresponding transform files are present. |
+| Z-signal correction is slow | GPU execution is recommended for large image stacks. |
+| Out-of-memory errors | Reduce image stack size or frame count, or use a machine with more available memory. |
+| Empty puncta detection output | Check channel assignments, voxel dimensions, and detection threshold. |
+| Missing `.nimp` files during classification | Run puncta detection first and confirm that the output files are in the classification input folder. |
+| Import or path errors | Run scripts from the repository root. |
 
 ## References
 
 - **Puncta detection:** Feng et al., *Improved synapse detection for mGRASP-assisted brain connectivity mapping*, Bioinformatics (2012).
-- **Z-signal (ISCL):** Lee et al., *ISCL: Interdependent Self-Cooperative Learning for Unpaired Image Denoising*, IEEE TMI (2021).
-- **Shading correction:** Peng et al., *A BaSiC tool for background and shading correction of optical microscopy images*, Nature Communications, (2017).
+- **Z-signal correction (ISCL):** Lee et al., *ISCL: Interdependent Self-Cooperative Learning for Unpaired Image Denoising*, IEEE Transactions on Medical Imaging (2021).
+- **Shading correction:** Peng et al., *A BaSiC tool for background and shading correction of optical microscopy images*, Nature Communications (2017).
+
+## Code and data availability
+
+The SynScope source code is available at https://github.com/jinnyLab/SynScope.
+
+The raw microscopy datasets and processed data supporting the findings of this study are available from the corresponding author upon reasonable request.
 
 ## License
 
