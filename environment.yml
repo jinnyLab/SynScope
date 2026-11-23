@@ -5,7 +5,7 @@ channels:
   - conda-forge
   - fenglab
 dependencies:
-  - python=3.10
+  - python=3.12
   - numpy>=1.26,<2
   - scipy
   - pandas
