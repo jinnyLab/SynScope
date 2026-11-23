@@ -15,7 +15,7 @@ if str(_script_dir) not in sys.path:
     sys.path.insert(0, str(_script_dir))
 
 from zimg import ZPuncta
-from utils.synpase_classification.mGRASP_puncta_core_functions import (
+from utils.synapse_classification.mGRASP_puncta_core_functions import (
     ClassifyConfig,
     load_data,
     compute_adaptive_thresholds,
@@ -25,7 +25,7 @@ from utils.synpase_classification.mGRASP_puncta_core_functions import (
     _load_image_channels,
     _sample_roi_intensities,
 )
-from utils.synpase_classification.mGRASP_puncta_inference import PairwiseOverlapClassifier
+from utils.synapse_classification.mGRASP_puncta_inference import PairwiseOverlapClassifier
 
 
 def _find_models() -> Optional[str]:
