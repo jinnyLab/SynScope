@@ -73,7 +73,7 @@ Install Conda or Miniconda if it is not already available.
 Create and activate a new environment:
 
 ```bash
-conda create -n synscope python=3.10.13 -y
+conda create -n synscope python=3.12 -y
 conda activate synscope
 ```
 
