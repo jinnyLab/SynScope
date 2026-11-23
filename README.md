@@ -45,7 +45,7 @@ SynScope was tested using the following software environment:
 | Component | Tested version |
 |---|---|
 | Operating system | Ubuntu 20.04.2 LTS |
-| Python | 3.10.13 |
+| Python | 3.12 |
 | NumPy | 1.26.4 |
 | SciPy | 1.11.4 |
 | pandas | 2.2.1 |
